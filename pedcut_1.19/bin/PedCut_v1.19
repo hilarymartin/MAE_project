@@ -1,0 +1,536 @@
+#!/usr/bin/perl -w
+$| = 1;
+open (STDOUT,"| tee PedCut.log");
+print"
+\t#############################
+\t#  PedCut version 1.19      #
+\t#  Fan Liu                  #
+\t#  Erasmus MC Rotterdam     #
+\t#############################
+
+";
+use strict;
+use diagnostics;
+use Getopt::Long;
+use Pod::Usage;
+use File::Temp;
+use Time::localtime;
+
+##############################
+###     INITIALIZATION
+
+my %opt;
+$opt{fast}= 0;
+$opt{out} = "SubPedigrees.csv";
+GetOptions (
+  "pedin:s" => \$opt{pedin},
+  "maxbit:s" => \$opt{maxbit},
+  "out:s"  => \$opt{out},
+  "help|?" => \$opt{help}
+);
+pod2usage(-exitstatus => 0, -verbose => 2) if $opt{help};
+pod2usage(0) if (!$opt{pedin}||!$opt{maxbit});
+
+print "Following arguments are under consideration:
+--pedin         $opt{pedin}
+--maxbit        $opt{maxbit}
+--out           $opt{out}
+";
+open (CHECKF,"$opt{pedin}")||die"Cannot find the file $opt{pedin}, $!\n";close (CHECKF);
+unlink ($opt{out});
+
+my $tm = localtime;
+printf("\nStart %02d:%02d:%02d-%04d/%02d/%02d\n\n",
+    $tm->hour, $tm->min, $tm->sec, $tm->year+1900,
+    $tm->mon+1, $tm->mday);
+
+
+###	END OF INITIALIZATION
+##############################
+###	MAIN
+
+###	READ PEDIN
+my (@peds,@ids,%idfa,%idmo,%idsx,@soi,$i,%idaff);
+open (IN,"$opt{pedin}")||die "can not open the input pedigree file, $!\n";
+while (my $ln = <IN>){
+	chomp ($ln); 
+	my @line =  split (/\s+|,/,$ln);
+	push (@peds,$line[0]);
+	push (@ids,$line[1]);
+	$idfa{$line[1]}=$line[2];
+	$idmo{$line[1]}=$line[3];
+	$idsx{$line[1]}=$line[4];
+	$idaff{$line[1]}=$line[5];
+	if ($line[5] != 0){push (@soi,$line[1]);}	# subjects of interest (SOI)
+}close (IN);
+@ids = sort{$a<=>$b} (@ids); # sorted all ids
+
+###	COMPUTE PAIR-WISE KINSHIP
+print "Computing pair-wise kinship for @{[@soi+0]} Subjects Of Interest (SOI) ...\t";
+my %iik;	# kinship matrix
+my %iil;	# log transformed kinship
+my $p3kin = "p3kin";	# temp file
+my $p3ped = "p3ped";	# temp file
+my $p3lst = "p3lst";	# temp file
+open (P3PED,">$p3ped"); 
+my %idsq; 	# recode id in sequence
+for (my $i=0;$i<=$#ids;$i++){$idsq{$ids[$i]}=$i+1;}
+foreach my $id(@ids){
+	if ($idsq{$idfa{$id}}){
+		print P3PED "$idsq{$id} $idsq{$idfa{$id}} $idsq{$idmo{$id}} 1999 $idsx{$id} 1 1\n";
+	}else {	
+		print P3PED "$idsq{$id} 0 0 1999 $idsx{$id} 1 1\n";
+	}
+}close (P3PED);
+open (P3LST,">$p3lst"); 
+foreach my $id(@soi){print P3LST "$idsq{$id} 1\n"} 
+close (P3LST);
+my $p3in = new File::Temp();
+open (P3I,">$p3in"); print P3I "$p3ped\n$p3lst\n$p3kin\n";close P3I;
+my $p3log = new File::Temp();
+my $is_par3=0; 
+for my $filename(<*>){if ($filename eq "par3"){$is_par3 = 1;}}
+if($is_par3==1){system ("./par3 < $p3in > $p3log");}else{system ("par3 < $p3in > $p3log");}
+open (KINSQ,"$p3kin")||die "can not open temp kinship file, $!\n";
+while (my $ln = <KINSQ>){
+	no warnings;
+	chomp ($ln);
+	$ln =~ s/^\s+//g;
+	my @line = split (/\s+/,$ln);
+	if ($line[2]){
+		if ($line[2]>0 and $line[0]!=$line[1]){
+			#$iik{$ids[$line[0]-1]}{$ids[$line[1]-1]}=$line[2];
+			#$iik{$ids[$line[1]-1]}{$ids[$line[0]-1]}=$line[2];
+			$iil{$ids[$line[0]-1]}{$ids[$line[1]-1]}=log($line[2])/log(0.5);
+			$iil{$ids[$line[1]-1]}{$ids[$line[0]-1]}=log($line[2])/log(0.5);
+		}elsif($line[2]==0 and $line[0]!=$line[1]){
+			#$iik{$ids[$line[0]-1]}{$ids[$line[1]-1]}=0;
+			#$iik{$ids[$line[1]-1]}{$ids[$line[0]-1]}=0;
+			$iil{$ids[$line[0]-1]}{$ids[$line[1]-1]}=999;
+			$iil{$ids[$line[1]-1]}{$ids[$line[0]-1]}=999;
+		}
+	}
+} close (KINSQ);
+unlink ($p3ped,$p3kin,$p3lst);	# remove temp files
+unlink ($opt{out});
+my ($permct,%perm);
+my $pid = 0;	# pedid
+my $recct = 1;	# recursion count
+print "Done\n";
+
+###	DEFINE Rij MATRIX
+print "Forming Rij Matrix ...\t";
+&recursion(@soi); sub recursion{	# Start Recursion
+my @soi = @_;
+my %c_r;	# center_relatives
+my %ct;		# temp variable for counting
+my $nc=0;	# total number of clusters
+my %c;		# Rij Matrix complete
+my %c_size;	# Rij cluster size
+my $up;		# upper bound size
+if ($opt{maxbit}*2<@soi){$up = $opt{maxbit}*2-2;}else{$up = @soi-2;}
+foreach $i(@soi){
+	my @ary =();
+	my @centr = ($i);
+	my @relat = rm_ary1_ary2(\@centr,\@soi);
+	@ary = sort{$iil{$i}{$a} <=> $iil{$i}{$b}} @relat;
+	$c_r{$i} = \@ary;
+}
+foreach $i(@soi){
+	my (@toBePermuted,$startPermute);
+	for (my $j=0;$j<=$up;$j++){
+		if ($iil{$i}{${$c_r{$i}}[$j]} != 999){
+			my (@ary1,@ary2,$t);
+			# The following blocked part dose permutation in case of equality
+			# After extensive check, I believe permution does not influence result but slightly increase running time
+			# To activate permutaion, remove the # at the beginning of the following lines
+			#if (${$c_r{$i}}[$j-1] and ${$c_r{$i}}[$j] and $iil{$i}{${$c_r{$i}}[$j]}==$iil{$i}{${$c_r{$i}}[$j-1]}){
+			#	if(@toBePermuted==0){push (@toBePermuted,${$c_r{$i}}[$j-1],${$c_r{$i}}[$j]);}
+			#	else{push (@toBePermuted,${$c_r{$i}}[$j]);}
+			#	my @ary0 =  ($i,@{$c_r{$i}}[0..$j]);
+			#	splice (@ary0,-@toBePermuted);
+			#	undef %perm;  $permct = 0;
+			#	&permut(\@toBePermuted);
+			#	for my $p (1..$permct){
+			#		@ary1 = (@ary0,@{$perm{$p}});
+			#		@ary2 = sort{$a<=>$b} @ary1;
+			#		$t = join (':',@ary2);
+			#		$ct{$t}++;
+			#		if ($ct{$t}==1){
+			#			$nc++;
+			#			@{$c{$nc}}=@ary1;
+			#			$c_size{$nc}=@ary1;
+			#		}
+			#	}
+  			#}else {
+				@toBePermuted=();
+				@ary1 =  ($i,@{$c_r{$i}}[0..$j]);
+				@ary2 = sort{$a<=>$b} @ary1;
+				$t = join (':',@ary2);
+				$ct{$t}++;
+				if ($ct{$t}==1){
+					$nc++;
+					@{$c{$nc}}=@ary1;
+					$c_size{$nc}=@ary1;
+				}
+			#}
+		}
+	}
+}
+
+print "Done\n";
+my @c1;
+if ($nc!=0){
+	###	COMPUTE BIT-SIZE
+	print "\nRecursion $recct ==> analyzing $nc sub-groups of @{[@soi+0]} SOI\n";
+	my %c_bit;	# cluster ==> bitsize
+	my %c_st;	# cluster ==> sortvalue
+	my ($oped,$bit,$j,$pro);
+	$pro=1;
+	print "progress\t0%\n";
+	for $i(1..$nc){
+		my $per=$pro*10;
+		if ($i == int($nc/10*$pro)){$pro++; print "progress\t$per%\n"; }
+		if ($bit and $j and $bit>$opt{maxbit} and $c_size{$i}>$j){
+			#print "$i,$c_size{$i},ignored \t==> @{$c{$i}}\n";
+		}else{
+			$oped = new File::Temp();
+			my @tmp = &ped_common_ancestor ($c{$i},$oped,1);
+			$bit= $tmp[0];
+			$c_bit{$i} = $bit;
+			if ($bit<=$opt{maxbit}) {$c_st{$i} = int(1/$c_size{$i}*100000)*100000+$bit;}
+			#print "$i,$c_size{$i},$c_bit{$i} \t==> @{$c{$i}}\n";
+		}
+		$j=$c_size{$i};
+	}
+
+	###	SELECT SUB PEDIGEE 
+	@c1 = sort{$c_st{$a} <=> $c_st{$b}} keys %c_st;
+	if (@c1>0){
+		my @current = @{$c{$c1[0]}};
+		#print "current: @current\n";
+		my $size = @current;
+		my @c2 =shift(@c1);
+		my $ctt=1;
+		for ($i=0;$i<=$#c1;$i++){
+			my @compare = @{$c{$c1[$i]}};
+			my $shar = &doesShare (\@current,\@compare);
+			if ($shar == 0 and $size == @compare){
+				push (@current,@compare);
+				push (@c2,$c1[$i]);
+				$ctt++;
+			}
+		}
+		foreach (@c2){
+			my $oped = new File::Temp();
+			$pid++;
+			my @tmp = &ped_common_ancestor($c{$_},$oped,$pid);
+			system ("cat $oped >> $opt{out}");
+			my $b = $tmp[0];
+			my @ary1 = @tmp[1..$#tmp];
+# print "ary1: @ary1\n";
+			@soi = rm_ary1_ary2(\@ary1,\@soi);
+			print "Selected subpedigree $pid ==>\tBit $b\tN SOI @{[@ary1+0]}\n";
+		}
+			#print "Selected $ctt Pedigrees\n";
+	}else{print "No subpedigrees statisfy maxbit $opt{maxbit}\n"}
+}
+
+###	RECURSION
+if (@c1){$recct++;&recursion(@soi);}else {print "\nRecursion complete!\n\n";}}
+
+###	COUNT DUPLICATE
+my $tmpf = new File::Temp();
+open (INF,"$opt{out}")||goto END;
+open (TMPF,">$tmpf")||die;
+my %ctid;
+while (my $ln = <INF>){
+	chomp ($ln); 
+	my @line =  split (/,/,$ln);
+	$ctid{$line[1]}++;
+	print TMPF "$line[0],$line[1],$line[2],$line[3],$line[4],$line[5],@{[$ctid{$line[1]}-1]}\n";
+}
+close (TMPF);
+close (INF);
+system ("cp $tmpf $opt{out}");
+
+###	ENDING PROGRAM
+print "Selected in total $pid sub pedigrees\n";
+print "Created Output $opt{out}\n";
+system ("pedsum.pl $opt{out} PedsSummary.csv");
+END:
+$tm = localtime;
+printf("\nFinish %02d:%02d:%02d-%04d/%02d/%02d\n",
+    $tm->hour, $tm->min, $tm->sec, $tm->year+1900,
+    $tm->mon+1, $tm->mday);
+close (STDOUT);
+
+###	END OF MAIN
+###########################
+###	SUBS
+
+###	Create a smallest common-ancestor sub-pedigree 
+# Usage: $bit = &ped_common_ancestor (\@cluster,$temp_out_ped1,$ped_id);
+sub ped_common_ancestor {
+	my @cluster=@{$_[0]};my $outped = $_[1];my $ped_id = $_[2];
+	my $is_asp=0; 
+	for my $filename(<*>){if ($filename eq "asp"){$is_asp = 1;}}
+	open (ASPIN,">asp.in");foreach (@cluster){print ASPIN "$_\n";}close(ASPIN);
+	open (INDIV,">indiv.dat");foreach my $id(sort{$a<=>$b}@ids){print INDIV "$id,,,,,$idsx{$id},,\n";}close (INDIV); 
+	my %fa_mo_children;         
+	foreach my $id(@ids){push (@{$fa_mo_children{$idfa{$id}}{$idmo{$id}}},$id);}
+	open (RELAT,">relat.dat");select (RELAT);
+	foreach my $fa (keys %fa_mo_children){
+		foreach my $mo (keys %{$fa_mo_children{$fa}}){
+			if ($fa!=0 and $mo!=0){
+				print "$fa,$mo,00/00/00,";
+				foreach (@{$fa_mo_children{$fa}{$mo}}){print "<> $_ <>";}
+				print "\n";
+			}
+		}
+	}
+	close (RELAT);select(STDOUT); 
+	my $pedtmp = new File::Temp();
+	if($is_asp==1){system ("./asp -Fasp.in >$pedtmp");}else{system ("asp -Fasp.in >$pedtmp");}
+	unlink "indiv.dat";unlink "relat.dat";unlink "asp.in";
+	open (TEMPPEDIN, "$pedtmp") or die "cnt open input file $pedtmp, $!\n";
+	my $ped=0; my %ped_size; my $readin = 0;  my %ped_id_fa;  my %ped_id_mo; my @arr; my $smlest_ped = undef;
+	while (my $ln = <TEMPPEDIN>){
+		chomp ($ln); $ln =~ s/^\s+//g; 
+		if ($ln){
+			my @ary = (split /\s+/,$ln);
+			if ($ary[0] ne "test_ped" ){
+				$readin = 0;
+			} else {$readin = 1;}
+			if ($ary[0] eq "Pedigree"){$ped ++;}
+			if ($readin ==1 and $ped>0){
+				$ped_size{$ped}++;
+				$ped_id_fa{$ped}{$ary[1]}=$ary[2];
+				$ped_id_mo{$ped}{$ary[1]}=$ary[3];
+			}
+		}
+	}close (TEMPPEDIN);
+	my @keys = sort {$ped_size{$a} <=> $ped_size{$b}} keys %ped_size;
+	shift(@keys) unless $keys[0];
+	shift(@keys) unless $keys[0];
+	shift(@keys) unless $keys[0];
+	$smlest_ped = $keys[0];
+	if(!$smlest_ped){return (999);}
+	open (OUT, ">$outped") or die "cnt open output file $outped,$!\n";
+	my @affected; my $n_aff=0;
+	my $ct_nf=0; my $ct_f=0;
+	foreach $i(keys %{$ped_id_fa{$smlest_ped}}){
+		my $id = $i;  $id =~ s/^P|^N//g; 
+		my $fa = $ped_id_fa{$smlest_ped}{$i}; $fa =~ s/^P|^N//g;
+		my $mo = $ped_id_mo{$smlest_ped}{$i}; $mo =~ s/^P|^N//g;
+		if ($fa>0){
+			$ct_nf++;
+		}
+		elsif($fa==0){
+			$ct_f++;
+		}
+		else{
+			die "Fetal error: miss father in subroutine ped_common_ancestor !\n";
+		}
+		print OUT "$ped_id,$id,$fa,$mo,$idsx{$id},$idaff{$id}\n";
+		if($idaff{$id}!=0){push (@affected,$id);}
+	}
+	close (OUT);
+	my $bit=2*$ct_nf-$ct_f;
+	return ($bit,@affected);
+}
+
+###	Permute a given ary
+# Usage: permut(\@ary);
+# Require: global empty %perm and $permct
+# Overwrite: e.g. for (1..$permct){print "$_: @{$perm{$_}}\n";}
+# Source: tchrist@perl.com
+sub permut {
+	my @head;
+	my @tail;
+	if ($_[0]){@head = @{$_[0]};}else {@head = ();}
+	if ($_[1]){@tail = @{$_[1]};}else {@tail = ();}
+	unless (@head) {
+		# stop recursing when there are no elements in the head
+		$permct++;
+		$perm{$permct}=\@tail;
+	} else {
+		# for all elements in @head, move one from @head to @tail
+		# and call permut() on the new @head and @tail
+		my(@newhead,@newtail,$i);
+		foreach $i (0 .. $#head) {
+			@newhead = @head;
+			@newtail = @tail;
+			unshift(@newtail, splice(@newhead, $i, 1));
+			permut([@newhead], [@newtail]);
+		}
+	}
+}
+
+###	Check sharing between ary1 and ary2
+# Usage: $answer = doesShare(\@ary1,\@ary2);
+# Return: total number of shared elements
+sub doesShare {
+	my @ary1 = @{$_[0]};
+	my @ary2 = @{$_[1]};
+	my $shr = 0;
+	foreach my $i(@ary1){
+		my @exist = grep /^$i$/, @ary2;
+		$shr += @exist;
+	}
+	return ($shr);
+}
+
+###	Remove ary1 from ary2
+# Usage: @remain = rm_ary1_ary2(\@small_ary, \@big_ary);
+# Return: an ary consists of the remainning elements
+# ? duplicated values
+# ? order of elements
+sub rm_ary1_ary2{
+        my @sml = @{$_[0]};
+        my @big = @{$_[1]};
+        my @rmn = ();
+        @sml = sort {$a <=> $b} keys %{{map{$_,1} @sml}};
+        @big = sort {$a <=> $b} keys %{{map{$_,1} @big}};
+        for (my $i=0; $i<@big; $i++){
+                for (my $j=0; $j<@sml; $j++){
+                        if ($big[$i] == $sml[$j]){
+                                $big[$i]=0;
+                        }
+                }
+        }
+        @rmn = sort {$a <=> $b} keys %{{map{$_,1} @big}};
+        shift (@rmn) if ($rmn[0] == 0);
+        return (@rmn);
+}
+
+
+
+###	END OF SUBS
+#######################
+
+__END__
+
+=head1 NAME
+
+PedCut - Cut a large and complex pedigree into sub pedigrees
+
+=head1 SYNOPSIS
+
+pedcut -p pedin -m maxbit [-o output] [-h help]
+
+=head1 ARGUMENTS
+
+Required
+
+=over 4
+
+=item B<-p, --pedin>
+
+The input pedigree file
+
+=item B<-m, --maxbit>
+
+The maximal bit-size of sub-pedigrees
+
+=back
+
+Optional
+
+=over 4
+
+=item B<-o, --out>
+
+The output file
+Default file name is SubPedigrees.csv
+
+=item B<-h, --help>
+
+Display Usage and Arguments
+
+=back
+
+=head1 DESCRIPTION
+
+PedCut.pl cuts large and complex pedigrees into smaller sub-pedigrees.
+
+=head1 INPUT FILE FORMAT
+
+=head2 PEDIN
+
+This file should
+1. follow standard pre-linkage format;
+2. contain NO header line;
+3. be comma, tab or space(s) delimited;
+4. contain 6 columns of information
+FamilyID,ID,Father,Mother,Sex,Affection;
+5. have a name which do NOT contain a space(s).
+
+=head2 MAXBIT
+
+This is a number indicating the maximal bit-size
+of the resultant sub-pedigrees.
+
+=head1 OUTPUT FILE FORMAT
+
+The output file is comma delimited in pre-linkage fromat.
+The first 6 columns contain the following infromation,
+FamilyID,ID,Father,Mother,Sex,Affection,
+and the 7th column count how many times the individual
+has been duplicated (0 not,>=1 yes). For duplicated individuals, 
+phenotypic information should be set to missing in linkage
+analysis.
+
+=head1 EXAMPLE
+
+PedCut.pl -h
+
+=over 4
+
+This command will display full documentation of PedCut.pl
+
+=back
+
+PedCut.pl -i InPutPedigree.csv -m 20 -o SubPedigrees.csv
+
+=over 4
+
+This command will take InPutPedigree.csv as the input file,
+and 20 as the maximal bitsize limit of resultant subpedigrees,
+and give subpedigrees in a file named SubPedigrees.csv
+
+=back
+
+=head1 SYSTEM REQUIRMENTS
+
+This program is a Perl script. On most *NIX systems this is installed
+by default. For Windows users, ActivePerl (http://www.activeperl.com) 
+is required to be pre-installed.
+
+Modules used: Getopt::Long, Pod::Usage, File::Temp, Time::localtime.
+
+=head1 HISTROY
+
+created 03.Sep.2005
+
+last modify 07.Apr.2008
+
+=head1 VERSION
+
+1.19
+
+=head1 LICENSE
+
+GUN GPL v 2.0 or higher
+
+=head1 AUTHORS
+
+Fan Liu (f.liu@erasmusmc.nl)
+Eruasmus MC
+Rotterdam
+
+=head1 DISTRIBUTION
+
+<http://mga.bionet.nsc.ru>
+<http://mga.bionet.nsc.ru/pedcut/doc>
+

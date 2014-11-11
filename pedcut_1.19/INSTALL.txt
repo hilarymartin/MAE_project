@@ -1,0 +1,11 @@
+To compile, issue the following command:
+sh compile.sh
+
+After running this command, you will find that a new folder "bin" is created. 
+
+In this folder, there should be in total of 4 executable programs: PedCut_version, asp, par3, and pedsum.pl. 
+
+Rename PedCut_version to pedcut if you do not need previous versions of pedcut.
+
+Copy all these programs to /usr/local/bin (or ~/bin for local installation) to complete the installation.
+

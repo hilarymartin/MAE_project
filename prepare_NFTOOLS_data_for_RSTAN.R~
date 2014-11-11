@@ -1,0 +1,47 @@
+load("NFTOOLS_results/NFTOOLS_counts.all_families_except_outliers.RData")
+age.files=c("CARL/clean-carl-flip_b37-related.with_parental_age.txt",
+    "FC/FC.with_parental_age.txt",
+    "FVG/clean-fvg-flip_b37-related.with_parental_age.txt",
+    "GPC/GPC.with_parental_age.txt",
+    "NTR/NTR_v2_minus_MZs.with_parental_age.txt",
+    "ORCADES/ORCADES.with_parental_age.txt",
+    "QTR/QTR_minus_MZs.370K.with_parental_age.txt",
+    "QTR/QTR_minus_MZs.610K.with_parental_age.txt",
+    "VB/valborbera_b37-related.with_parental_age.txt",
+    "VIS_KORCULA/KORCULA.with_parental_age.txt",
+    "VIS_KORCULA/VIS.with_parental_age.txt")
+
+"NTR_v2"   "QTR_370K" "QTR_610K" "FC"       "GPC"      "VB"
+
+data1.mat=NULL
+data1.pat=NULL
+for(i in 2:length(all.events)){
+    events=all.events[[i]]
+    events$cohort=names(all.events)[i]
+    events$family=paste0(events$cohort,"_",events$family)
+    mat.events=events[events$sex=="female" & events$nkids>2,]
+    pat.events=events[events$sex=="male" & events$nkids>2,]
+    
+    
+}
+mat.cohort.count = table(data1.mat$cohort)
+pat.cohort.count = table(data1.pat$cohort)
+
+#only keep cohorts with more than 20
+data1.mat=data1.mat[data1.mat$cohort %in% names(mat.cohort.count[mat.cohort.count>20]),]
+data1.pat=data1.pat[data1.pat$cohort %in% names(pat.cohort.count[pat.cohort.count>20]),]
+
+mat.key.model1=unique(data.frame(as.integer(as.factor(data1.mat$cohort)),as.factor(data1.mat$cohort)))
+pat.key.model1=unique(data.frame(as.integer(as.factor(data1.pat$cohort)),as.factor(data1.pat$cohort)))
+colnames(mat.key.model1)=c("Code","Cohort")
+colnames(pat.key.model1)=c("Code","Cohort")
+write.table(mat.key.model1,"RSTAN_output/key_for_maternal_cohorts_to_include_in_model_1.txt",quote=F,sep="\t",row.names=F)
+write.table(pat.key.model1,"RSTAN_output/key_for_paternal_cohorts_to_include_in_model_1.txt",quote=F,sep="\t",row.names=F)
+
+
+data1.mat2=list(y=data1.mat$nrec,cohort=as.integer(as.factor(data1.mat$cohort)),family=as.integer(as.factor(data1.mat$PARENT)),Age=as.numeric(data1.mat$age.at.birth),J=nrow(data1.mat),I=length(unique(data1.mat$PARENT)),
+    C=length(unique(data1.mat$cohort)))
+data1.pat2=list(y=data1.pat$nrec,cohort=as.integer(as.factor(data1.pat$cohort)),family=as.integer(as.factor(data1.pat$PARENT)),Age=as.numeric(data1.pat$age.at.birth),J=nrow(data1.pat),I=length(unique(data1.pat$PARENT)),
+    C=length(unique(data1.pat$cohort)))
+
+save.image("NFTOOLS_data_for_RSTAN.NTR_v2.RData")

@@ -1,0 +1,7 @@
+c dimension
+      integer nt,ntp,ande,anfi,ng,pran,dean,nam,nelva,nlistx,nimp,nig
+      parameter (nt=128,ntp=32768)                    ! tous / all
+      parameter (nimp=50000)               ! prob_orig
+      parameter (ng=50,nig=-30)            ! etr,ngen / vanrad
+      parameter (nam=8192,nelva=10000)     ! par, parente
+      parameter (nlistx=50000)             ! par2,par3

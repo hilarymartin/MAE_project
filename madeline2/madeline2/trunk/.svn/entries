@@ -1,0 +1,123 @@
+10
+
+dir
+108
+svn://svn.code.sf.net/p/madeline2/code/madeline2/trunk
+svn://svn.code.sf.net/p/madeline2/code
+
+
+
+2014-07-10T15:27:37.157237Z
+108
+edtrager
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+36be61f0-9d1b-0410-b0b4-cea5cbe2d1c6
+
+cmake
+dir
+
+configure
+file
+
+
+
+
+2014-07-27T12:27:20.491440Z
+f1a04cec6ab64e0c0779c1d2e964a782
+2009-03-27T23:45:30.741600Z
+69
+edtrager
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+144
+
+src
+dir
+
+3rdParty
+dir
+
+bin
+dir
+
+documentation
+dir
+
+libs
+dir
+
+testdata
+dir
+
+doxygen
+dir
+
+CMakeLists.txt
+file
+
+
+
+
+2014-07-27T12:27:20.492546Z
+f31f241ae71f109d2da9bfcf52dbb025
+2014-07-02T20:29:11.379079Z
+101
+edtrager
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1787
+
+po
+dir
+

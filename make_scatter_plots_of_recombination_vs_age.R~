@@ -1,0 +1,33 @@
+load("duoHMM_data_for_RSTAN.NTR_v2.RData")
+mycols=c("black","blue","red","green","orange","red4","purple","darkgreen")
+names(mycols)=c("CARL","FC","FVG","GPC","NTR","QTR370","QTR610","VB")
+
+cohorts=c("CARL","FC","FVG","GPC","NTR","QTR370","QTR610","VB")
+
+library(scales)
+pdf("/home/hilary/maternal_age_recombination/scatterplots_of_duoHMM_crossovers_vs_age.informative_duos.pdf",height=6,width=12)
+par(mfrow=c(2,4))
+for(c in 1:length(cohorts)){
+    my.lm=summary(lm(data1.mat$nrec[data1.mat$cohort==cohorts[c]]~data1.mat$age.at.birth[data1.mat$cohort==cohorts[c]]))
+    plot(data1.mat$age.at.birth[data1.mat$cohort!=cohorts[c]],data1.mat$nrec[data1.mat$cohort!=cohorts[c]],main=cohorts[c],xlab="maternal age at birth",ylab="Number of crossovers",col=alpha("grey",0.4),pch=19,
+     xlim=range(data1.mat$age.at.birth),ylim=range(data1.mat$nrec),cex=0.5)
+    points(data1.mat$age.at.birth[data1.mat$cohort==cohorts[c]],data1.mat$nrec[data1.mat$cohort==cohorts[c]],col=alpha(mycols[cohorts[c]],0.5),pch=19,cex=0.5)
+    abline(a=my.lm$coefficients[1,1],b=my.lm$coefficients[2,1])
+           
+}
+dev.off()
+
+cohorts=c("FC", "GPC","NTR","QTR370", "QTR610", "VB" )
+pdf("/home/hilary/maternal_age_recombination/scatterplots_of_duoHMM_crossovers_vs_age.informative_nuc_fams.pdf",height=6,width=8)
+par(mfrow=c(2,3))
+for(c in 1:length(cohorts)){
+    my.lm=summary(lm(data0.mat$nrec[data0.mat$cohort==cohorts[c]]~data0.mat$age.at.birth[data0.mat$cohort==cohorts[c]]))
+    plot(data0.mat$age.at.birth[data0.mat$cohort!=cohorts[c]],data0.mat$nrec[data0.mat$cohort!=cohorts[c]],main=cohorts[c],xlab="maternal age at birth",ylab="Number of crossovers",col=alpha("grey",0.4),pch=19,
+     xlim=range(data0.mat$age.at.birth),ylim=range(data0.mat$nrec),cex=0.5)
+    points(data0.mat$age.at.birth[data0.mat$cohort==cohorts[c]],data0.mat$nrec[data0.mat$cohort==cohorts[c]],col=alpha(mycols[cohorts[c]],0.5),pch=19,cex=0.5)
+    abline(a=my.lm$coefficients[1,1],b=my.lm$coefficients[2,1])
+           
+}
+dev.off()
+
+

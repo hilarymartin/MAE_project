@@ -1,0 +1,325 @@
+if(FALSE){
+ylibrary(rstan)
+load("/home/hilary/TwinRecombination/Bayesian_modeling/input_data/NFTOOLS_counts_for_all_cohorts.RData")
+description="normal_model.cohort_specific_age_effects.RSTAN.6000iterations.4chains"
+setwd("/home/hilary/TwinRecombination/Bayesian_modeling/results_from_4_cohorts/normal_model_with_cohort_specific_age_effects")
+
+normal.model.code.cohort.specific.b <- '
+  data {
+    int<lower=0> J; // number of children
+    int<lower=0> I; // number of mothers
+    real<lower=0> y[J]; // number of recombinations
+    int<lower=0> mother[J]; // indicates which mother is with each child
+    real<lower=0> Age[J]; //maternal age at birth
+    int cohort[J];//which cohort (0=QTR,1=NTR)
+   }
+  transformed data{
+    int index[J];
+    for(j in 1:J){
+    index[j] <- cohort[j]+1;
+    }
+  }       
+  parameters {
+    real<lower=0> a0[I]; // random effect of mothers
+    vector[5]  beta_Age;
+    vector[4] beta_Cohort;
+    real<lower=0> tausq; //variance of number of scrossovers
+    //parameters for distribution of a0
+    real  mu_m; //mean for intercept
+    real<lower=0> sigmasq_m; //variance for intercept
+  }
+  transformed parameters {
+    real<lower=0> a0_bychild[J];
+    vector[J] mu;
+    vector[J] my_beta_Cohort;
+    for(j in 1:J){
+       a0_bychild[j]<-a0[mother[j]];
+         if(cohort[j]==0){
+              my_beta_Cohort[j] <- 0;
+         } else {
+              my_beta_Cohort[j] <- beta_Cohort[cohort[j]];
+         }
+       mu[j] <- a0_bychild[j]+ beta_Age[index[j]]*Age[j] + my_beta_Cohort[j];
+    }
+  }
+  model {
+  //Priors
+    beta_Age[1] ~ normal(0,1); //coefficient for age
+    beta_Age[2] ~ normal(0,1); //coefficient for age
+    beta_Age[3] ~ normal(0,1); //coefficient for age
+    beta_Age[4] ~ normal(0,1); //coefficient for age
+    beta_Age[5] ~ normal(0,1); //coefficient for age
+
+    beta_Cohort[1] ~ normal(0,4); //coefficient for cohort
+    beta_Cohort[2] ~ normal(0,4); //coefficient for cohort
+    beta_Cohort[3] ~ normal(0,4); //coefficient for cohort
+    beta_Cohort[4] ~ normal(0,4); //coefficient for cohort
+    tausq ~ inv_gamma(2,70);   //variance in number of crossovers
+
+    mu_m ~ normal(38,sqrt(3));//pick something sensible - this is the mean of a0; I chose the intercept from lm(mat.counts$Count~mat.counts$Maternal.age.at.birth)
+    sigmasq_m ~ inv_gamma(5,10);//pick something sensible - this is the variance of a0
+
+   for(i in 1:I){ //random effects of the mothers
+      a0[i] ~ normal(mu_m,sqrt(sigmasq_m));
+   }
+   y ~ normal(mu,sqrt(tausq)) ;
+}
+'
+normal.fit.cohort.specific.b <- stan(model_code = normal.model.code.cohort.specific.b,data = twin_data, iter = 10000, chains = 4)
+
+save(normal.fit.cohort.specific.b,file="/well/donnelly/hilary/TwinRecombination/Bayesian_modeling/RData_files_all_cohorts/normal.fit.cohort.specific.b.RData")
+}
+if(FALSE){
+print(normal.fit.cohort.specific.b,pars=c("beta_Age","beta_Cohort","tausq","sigmasq_m","mu_m"),digits=4)
+
+fit5=normal.fit.cohort.specific.b
+
+pdf(paste(description,".pdf",sep=""))
+plot(fit5)
+dev.off()
+}
+description="normal_model.cohort_specific_age_effects.RSTAN.6000iterations.4chains"
+setwd("/home/hilary/TwinRecombination/Bayesian_modeling/results_from_4_cohorts/normal_model_with_cohort_specific_age_effects")
+fit5=normal.fit.cohort.specific.b
+fit4_sim<-extract(fit5,permuted=T)
+names(fit4_sim)[1]="a0"
+
+predict_y<-function(a0,beta_Age,age,cohort,beta_Cohort){
+    my_beta_Cohort <- c(0,beta_Cohort)
+    return(a0+beta_Age[cohort+1]*age+my_beta_Cohort[cohort+1])
+}
+
+simulate_y<-function(N,a0,beta_Age,age,tausq,cohort,beta_Cohort){
+     my_beta_Cohort <- c(0,beta_Cohort)
+     return(rnorm(N,mean=(a0+beta_Age[cohort+1]*age+my_beta_Cohort[cohort+1]),sd=sqrt(tausq)))
+}
+
+n_sims2 <- length (fit4_sim$lp__)
+y_predictions <- array (NA, c(n_sims2, J))
+y_rep2 <- array (NA, c(n_sims2, J))
+for (s in 1:n_sims2){
+        y_predictions[s,] <- predict_y(fit4_sim$a0[s,mother],fit4_sim$beta_Age[s,],Age,cohort,fit4_sim$beta_Cohort[s,])
+            y_rep2[s,] <- simulate_y(J,fit4_sim$a0[s,mother],fit4_sim$beta_Age[s,],Age,fit4_sim$tausq[s],cohort,fit4_sim$beta_Cohort[s,])
+}
+
+y_predict=predict_y(apply(fit4_sim$a0,2,mean)[mother],apply(fit4_sim$beta_Age,2,mean),Age,cohort,apply(fit4_sim$beta_Cohort,2,mean))
+names(y_predict)=1:length(y_predict)
+classic_residuals=y-y_predict
+names(classic_residuals)=1:length(y_predict)
+
+outdata=cbind(y,y_predict,classic_residuals,mother,cohort,Age)
+colnames(outdata)=c("observed_crossovers","predicted_crossovers","residual","parent","chip","parental_age")
+write.table(outdata,"observed_and_predicted_maternal_crossovers.4_cohorts.normal_model.cohort_effect_and_cohort_specific_age_effect.txt",quote=F,sep="\t")
+
+y_predict_medians=predict_y(apply(fit4_sim$a0,2,median)[mother],apply(fit4_sim$beta_Age,2,median),Age,cohort,apply(fit4_sim$beta_Cohort,2,median)) #use median estimates (or MAP)
+classic_residuals_medians=y-y_predict_medians
+names(y_predict_medians)=1:length(y_predict_medians)
+names(classic_residuals_medians)=1:length(y_predict_medians)
+
+pdf(paste("histograms_of_observed_and_simulated_y.",description,".pdf",sep=""),height=20,width=20)
+par(mfrow=c(4,5))
+hist(y,main="Observed crossover counts",xlab="Observed crossover counts",xlim=range(c(y,y_rep2[1:19,])),cex.lab=2,cex.main=2,cex.axis=2)
+random_draws=sample(nrow(fit4_sim$beta_Age),20)
+for(i in 2:20){
+s=random_draws[i]
+hist(y_rep2[s,],main=paste("Simulated rep",s,sep=""),xlab="Simulated counts",xlim=range(c(y,y_rep2[1:19,])),cex.lab=2,cex.main=2,cex.axis=2)
+}
+dev.off()
+
+pdf(paste("histograms_of_observed_and_predicted_y_from_posterior_means.",description,".pdf",sep=""),height=10,width=20)
+par(mfrow=c(1,2))
+hist(y,main="Observed crossover counts",xlab="Observed crossover counts",xlim=range(c(y,y_rep2[1:19,])),cex.lab=2,cex.main=2,cex.axis=2)
+hist(y_predict,main="Predicted crossover counts",xlab="Predicted crossover counts",xlim=range(c(y,y_rep2[1:19,])),cex.lab=2,cex.main=2,cex.axis=2)
+dev.off()
+
+pdf(paste("histograms_of_observed_and_simulated_y_from_posterior_means.",description,".pdf",sep=""),height=10,width=20)
+par(mfrow=c(1,2))
+hist(y,main="Observed crossover counts",xlab="Observed crossover counts",xlim=range(c(y,y_rep2[1:19,])),cex.lab=2,cex.main=2,cex.axis=2)
+y_sim=simulate_y(J, apply(fit4_sim$a0,2,mean)[mother],apply(fit4_sim$beta_Age,2,mean),Age,mean(fit4_sim$tausq),cohort,apply(fit4_sim$beta_Cohort,2,mean))
+hist(y_sim,main="Simulated crossover counts",xlab="Simulated crossover counts",xlim=range(c(y,y_rep2[1:19,])),cex.lab=2,cex.main=2,cex.axis=2)
+dev.off()
+#tail area probabilities
+#test statistic sensitive to asymmetry in y
+#is this really the statistic they're calculating on p. 164 - what is theta?
+test_10pc_90pc <- function (y){
+return (abs(quantile(y,0.9)-median(y))-abs(quantile(y,0.1)-median(y)))
+}
+
+min_y <- min(y)
+min_rep <- rep (NA, n_sims2)
+for (s in 1:n_sims2)
+min_rep[s] <- min(y_rep2[s,])
+mean(min_rep>min_y)
+
+max_y <- max(y)
+max_rep <- rep (NA, n_sims2)
+for (s in 1:n_sims2)
+max_rep[s] <- max(y_rep2[s,])
+mean(max_rep>max(y))
+
+test_10pc_90pc_y <-test_10pc_90pc(y)
+test_10pc_90pc_y_rep<-rep(NA,n_sims2)
+for(s in 1:n_sims2)
+test_10pc_90pc_y_rep[s] <-test_10pc_90pc(y_rep2[s,])
+mean(test_10pc_90pc_y_rep>test_10pc_90pc_y)
+
+pdf(paste("histogram_of_maximum_predicted_y.",description,".pdf",sep=""),height=5,width=5)
+hist(max_rep,xlim=range(c(max_y,max_rep)),xlab="maximum predicted y",main="Maximum predicted number of crossovers")
+abline(v=max_y)
+legend("topleft",paste("upper tailed p=",round(mean(max_rep>max(y)),3)))
+dev.off()
+
+pdf(paste("histogram_of_minimum_predicted_y.",description,".pdf",sep=""),height=5,width=5)
+hist(min_rep,xlim=range(c(min_y,min_rep)),xlab="minimum predicted y",main="Minimum predicted number of crossovers")
+abline(v=min_y)
+legend("topleft",paste("upper tailed p=",round(mean(min_rep>min(y)),3)))
+dev.off()
+
+pdf(paste("histogram_of_asymmetry_y.",description,".pdf",sep=""),height=5,width=5)
+hist(test_10pc_90pc_y_rep,xlim=range(c(test_10pc_90pc_y,test_10pc_90pc_y_rep)),xlab="|90pc_y - 50pc_y|-|10pc_y - 50pc_y|",main="Asymmetry in number of crossovers")
+abline(v=test_10pc_90pc_y)
+legend("topleft",paste("upper tailed p=",round(mean(test_10pc_90pc_y_rep>test_10pc_90pc_y),3)))
+dev.off()
+
+#plot residuals for a few draws
+pdf(paste("Bayesian_residual_plot.",description,".pdf",sep=""),height=20,width=20)
+par(mfrow=c(4,5))
+for(i in 1:20){
+s=random_draws[i]
+y_predict_s=predict_y(fit4_sim$a0[s,mother],fit4_sim$beta_Age[s,],Age,cohort,fit4_sim$beta_Cohort[s,])
+
+residuals=y-y_predict_s
+plot(y_predict_s,residuals,ylab="residual",xlab="expected count",main=paste("rep",s,sep=""),cex.lab=2,cex.main=2,cex.axis=2)
+abline(h=0,col="red")
+}
+dev.off()
+#plot residuals for a few draws,binned
+pdf(paste("Bayesian_binned_residual_plot.",description,".pdf",sep=""),height=20,width=20)
+par(mfrow=c(4,5))
+for(i in 1:20){
+s=random_draws[i]
+y_predict_s=predict_y(fit4_sim$a0[s,mother],fit4_sim$beta_Age[s,],Age,cohort,fit4_sim$beta_Cohort[s,])
+
+residuals=y-y_predict_s
+names(y_predict_s)=1:length(y_predict_s)
+y_predict_sorted=sort(y_predict_s)
+names(residuals)=1:length(y_predict_s)
+residuals_sorted=residuals[names(y_predict_sorted)]
+y_predict_binned=rep(NA,20)
+residuals_binned=rep(NA,20)
+increment=round(length(y_predict_s)/20)
+c=1
+for(i in 1:20){
+y_predict_binned[i]=mean(y_predict_sorted[c:min((c+increment),length(y_predict_s))])
+residuals_binned[i]=mean(residuals_sorted[c:min((c+increment),length(y_predict_s))])
+c=c+increment
+}
+plot(y_predict_binned,residuals_binned,ylab="estimated residual, binned",xlab="expected count, binned",main=paste("rep",s,sep=""),cex.lab=2,cex.main=2,cex.axis=2)
+abline(h=0,col="red")
+}
+dev.off()
+
+pdf(paste("binned_residual_plot.",description,".pdf",sep=""),height=10,width=10)
+y_predict_sorted=sort(y_predict)
+classic_residuals_sorted=classic_residuals[names(y_predict_sorted)]
+y_predict_binned=rep(NA,20)
+classic_residuals_binned=rep(NA,20)
+increment=round(length(y_predict)/20)
+c=1
+for(i in 1:20){
+y_predict_binned[i]=mean(y_predict_sorted[c:min((c+increment),length(y_predict))])
+classic_residuals_binned[i]=mean(classic_residuals_sorted[c:min((c+increment),length(y_predict))])
+c=c+increment
+}
+plot(y_predict_binned,classic_residuals_binned,ylab="estimated residual, binned",xlab="expected count, binned",main="Binned estimated residuals vs. expected counts",cex.lab=2,cex.main=2,cex.axis=2)
+abline(h=0,col="red")
+dev.off()
+
+pdf(paste("binned_residual_plot.",description,".with_95pc_interval.pdf",sep=""),height=10,width=10)
+y_predict_sorted=sort(y_predict)
+classic_residuals_sorted=classic_residuals[names(y_predict_sorted)]
+y_predict_binned=rep(NA,20)
+classic_residuals_binned=rep(NA,20)
+increment=round(length(y_predict)/20)
+c=1
+for(i in 1:20){
+y_predict_binned[i]=mean(y_predict_sorted[c:min((c+increment),length(y_predict))])
+classic_residuals_binned[i]=mean(classic_residuals_sorted[c:min((c+increment),length(y_predict))])
+c=c+increment
+}
+plot(y_predict_binned,classic_residuals_binned,ylab="estimated residual, binned",xlab="expected count, binned",main="Binned estimated residuals vs. expected counts",cex.lab=2,cex.main=2,cex.axis=2,
+     ylim=range(classic_residuals_sorted),xlim=range(y_predict),col="white")
+abline(h=0,col="red")
+c=1
+for(i in 1:20){
+    mypredictions=y_predict_sorted[c:min((c+increment),length(y_predict))]
+    myresiduals=classic_residuals_sorted[c:min((c+increment),length(y_predict))]
+    segments(y_predict_binned[i],quantile(myresiduals,0.25),y_predict_binned[i],quantile(myresiduals,0.75))
+    segments(quantile(mypredictions,0.25),classic_residuals_binned[i],quantile(mypredictions,0.75),classic_residuals_binned[i])
+    c=c+increment
+}
+dev.off()
+names(Age)=1:length(Age)
+pdf(paste("binned_residual_plot_by_age_with_50pc_interval.",description,".pdf",sep=""),height=10,width=10)
+Age_sorted=sort(Age)
+classic_residuals_sorted=classic_residuals[names(Age_sorted)]
+Age_binned=rep(NA,20)
+classic_residuals_binned=rep(NA,20)
+increment=round(length(y_predict)/20)
+c=1
+for(i in 1:20){
+Age_binned[i]=mean(Age_sorted[c:min((c+increment),length(y_predict))])
+classic_residuals_binned[i]=mean(classic_residuals_sorted[c:min((c+increment),length(y_predict))])
+c=c+increment
+}
+plot(Age_binned,classic_residuals_binned,ylab="estimated residual, binned",xlab="Age, binned",main="Binned estimated residuals vs. Age",cex.lab=2,cex.main=2,cex.axis=2,
+     ylim=c(-10,10),xlim=range(Age),col="white")
+abline(h=0,col="red")
+c=1
+range.25th.to.75th = c()
+for(i in 1:20){
+    mypredictions=Age_sorted[c:min((c+increment),length(y_predict))]
+    myresiduals=classic_residuals_sorted[c:min((c+increment),length(y_predict))]
+    range.25th.to.75th =c(range.25th.to.75th ,quantile(myresiduals,0.75)-quantile(myresiduals,0.25))
+    segments(Age_binned[i],quantile(myresiduals,0.25),Age_binned[i],quantile(myresiduals,0.75))
+    segments(quantile(mypredictions,0.25),classic_residuals_binned[i],quantile(mypredictions,0.75),classic_residuals_binned[i])
+    c=c+increment
+}
+plot(Age_binned,range.25th.to.75th,ylab="interquartile range of residuals",xlab="Age,binned",main="Interquartile range of residuals vs. Age",cex.lab=2,cex.main=2,cex.axis=2)
+dev.off()
+
+
+pdf(paste("residual_plot.",description,".pdf",sep=""),height=10,width=10)
+plot(y_predict,classic_residuals,ylab="estimated residual",xlab="expected count",main="Estimated residuals vs. expected counts",cex.lab=2,cex.main=2,cex.axis=2)
+abline(h=0,col="red")
+dev.off()
+
+pdf(paste("distribution_of_residuals.",description,".pdf",sep=""),height=5,width=10)
+par(mfrow=c(1,2))
+plot(density(classic_residuals),xlab="estimated residuals",main="Distribution of estimated residuals")
+qqnorm(classic_residuals)
+qqline(classic_residuals)
+dev.off()
+
+pdf(paste("residual_plot_using_medians_for_prediction.",description,".pdf",sep=""),height=10,width=10)
+plot(y_predict_medians,classic_residuals_medians,ylab="estimated residual",xlab="expected count",main="Estimated residuals vs. expected counts",cex.lab=2,cex.main=2,cex.axis=2)
+abline(h=0,col="red")
+dev.off()
+
+pdf(paste("binned_residual_plot_using_medians_for_prediction.",description,".pdf",sep=""),height=10,width=10)
+y_predict_sorted=sort(y_predict_medians)
+classic_residuals_sorted=classic_residuals_medians[names(y_predict_sorted)]
+y_predict_binned=rep(NA,20)
+classic_residuals_binned=rep(NA,20)
+increment=round(length(y_predict)/20)
+c=1
+for(i in 1:20){
+y_predict_binned[i]=mean(y_predict_sorted[c:min((c+increment),length(y_predict))])
+classic_residuals_binned[i]=mean(classic_residuals_sorted[c:min((c+increment),length(y_predict))])
+c=c+increment
+}
+plot(y_predict_binned,classic_residuals_binned,ylab="estimated residual, binned",xlab="expected count, binned",main="Binned estimated residuals vs. expected counts",cex.lab=2,cex.main=2,cex.axis=2)
+abline(h=0,col="red")
+dev.off()
+
+

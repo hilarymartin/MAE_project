@@ -1,0 +1,238 @@
+setwd( "/gpfs1/well/donnelly/hilary/maternal_age_and_recombination/")
+p.cutoff=c(0,0.5,0.9,0.95)
+
+x=2
+
+#all.files=list(c("QTR/duoHMM_results/QTR.370K.generr_removed.total_recombination_counts.paternal.p_0.txt","QTR/duoHMM_results/QTR.610K.generr_removed.total_recombination_counts.paternal.p_0.txt","NTR/duoHMM_results/NTR.generr_removed.total_recombination_counts.paternal.p_0.txt","FC/duoHMM_results/FC.generr_removed.total_recombination_counts.paternal.p_0.txt","ORCADES/duoHMM_results/ORCADES_raw_merged.max_0.05_missing.generr_removed.total_recombination_counts.paternal.p_0.txt","CARL/duoHMM_results/CARL.generr_removed.total_recombination_counts.paternal.p_0.txt","VB/duoHMM_results/VB.generr_removed.total_recombination_counts.paternal.p_0.txt","FVG/duoHMM_results/FVG.generr_removed.total_recombination_counts.paternal.p_0.txt","VIS_KORCULA/duoHMM_results/VIS.generr_removed.total_recombination_counts.paternal.p_0.txt","VIS_KORCULA/duoHMM_results/KORCULA.generr_removed.total_recombination_counts.paternal.p_0.txt"),c("QTR/duoHMM_results/QTR.370K.generr_removed.total_recombination_counts.paternal.p_0.no_double_recombinants_within_1000000bp.txt","QTR/duoHMM_results/QTR.610K.generr_removed.total_recombination_counts.paternal.p_0.no_double_recombinants_within_1000000bp.txt","NTR/duoHMM_results/NTR.generr_removed.total_recombination_counts.paternal.p_0.no_double_recombinants_within_1000000bp.txt","FC/duoHMM_results/FC.generr_removed.total_recombination_counts.paternal.p_0.no_double_recombinants_within_1000000bp.txt","ORCADES/duoHMM_results/ORCADES_raw_merged.max_0.05_missing.generr_removed.total_recombination_counts.paternal.p_0.no_double_recombinants_within_1000000bp.txt","CARL/duoHMM_results/CARL.generr_removed.total_recombination_counts.paternal.p_0.no_double_recombinants_within_1000000bp.txt","VB/duoHMM_results/VB.generr_removed.total_recombination_counts.paternal.p_0.no_double_recombinants_within_1000000bp.txt","FVG/duoHMM_results/FVG.generr_removed.total_recombination_counts.paternal.p_0.no_double_recombinants_within_1000000bp.txt","VIS_KORCULA/duoHMM_results/VIS.generr_removed.total_recombination_counts.paternal.p_0.no_double_recombinants_within_1000000bp.txt","VIS_KORCULA/duoHMM_results/KORCULA.generr_removed.total_recombination_counts.paternal.p_0.no_double_recombinants_within_1000000bp.txt"),c("QTR/duoHMM_results/QTR.370K.post_MERLIN.max_0.05_missing.generr_removed.total_recombination_counts.paternal.p_0.txt","QTR/duoHMM_results/QTR.610K.post_MERLIN.max_0.05_missing.generr_removed.total_recombination_counts.paternal.p_0.txt","NTR/duoHMM_results/NTR.post_MERLIN.max_0.05_missing.generr_removed.total_recombination_counts.paternal.p_0.txt","FC/duoHMM_results/FC.generr_removed.total_recombination_counts.paternal.p_0.txt","ORCADES/duoHMM_results/ORCADES_raw_merged.max_0.05_missing.generr_removed.total_recombination_counts.paternal.p_0.txt","CARL/duoHMM_results/CARL.generr_removed.total_recombination_counts.paternal.p_0.txt","VB/duoHMM_results/VB.generr_removed.total_recombination_counts.paternal.p_0.txt","FVG/duoHMM_results/FVG.generr_removed.total_recombination_counts.paternal.p_0.txt","VIS_KORCULA/duoHMM_results/VIS.generr_removed.total_recombination_counts.paternal.p_0.txt","VIS_KORCULA/duoHMM_results/KORCULA.generr_removed.total_recombination_counts.paternal.p_0.txt"),c("QTR/duoHMM_results/QTR.370K.post_MERLIN.max_0.05_missing.generr_removed.total_recombination_counts.paternal.p_0.no_double_recombinants_within_1000000bp.txt","QTR/duoHMM_results/QTR.610K.post_MERLIN.max_0.05_missing.generr_removed.total_recombination_counts.paternal.p_0.no_double_recombinants_within_1000000bp.txt","NTR/duoHMM_results/NTR.post_MERLIN.max_0.05_missing.generr_removed.total_recombination_counts.paternal.p_0.no_double_recombinants_within_1000000bp.txt","FC/duoHMM_results/FC.generr_removed.total_recombination_counts.paternal.p_0.no_double_recombinants_within_1000000bp.txt","ORCADES/duoHMM_results/ORCADES_raw_merged.max_0.05_missing.generr_removed.total_recombination_counts.paternal.p_0.no_double_recombinants_within_1000000bp.txt","CARL/duoHMM_results/CARL.generr_removed.total_recombination_counts.paternal.p_0.no_double_recombinants_within_1000000bp.txt","VB/duoHMM_results/VB.generr_removed.total_recombination_counts.paternal.p_0.no_double_recombinants_within_1000000bp.txt","FVG/duoHMM_results/FVG.generr_removed.total_recombination_counts.paternal.p_0.no_double_recombinants_within_1000000bp.txt","VIS_KORCULA/duoHMM_results/VIS.generr_removed.total_recombination_counts.paternal.p_0.no_double_recombinants_within_1000000bp.txt","VIS_KORCULA/duoHMM_results/KORCULA.generr_removed.total_recombination_counts.paternal.p_0.no_double_recombinants_within_1000000bp.txt"))
+
+all.files=list(c("QTR/duoHMM_results/QTR.370K.post_MERLIN.max_0.05_missing.generr_removed.total_recombination_counts.paternal.p_0.txt","QTR/duoHMM_results/QTR.610K.post_MERLIN.max_0.05_missing.generr_removed.total_recombination_counts.paternal.p_0.txt","NTR/duoHMM_results/NTR.post_MERLIN.max_0.05_missing.generr_removed.total_recombination_counts.paternal.p_0.txt","FC/duoHMM_results/FC.post_MERLIN.generr_removed.total_recombination_counts.paternal.p_0.txt","ORCADES/duoHMM_results/ORCADES_raw_merged.max_0.05_missing.generr_removed.total_recombination_counts.paternal.p_0.txt","CARL/duoHMM_results/CARL.generr_removed.total_recombination_counts.paternal.p_0.txt","VB/duoHMM_results/VB.generr_removed.total_recombination_counts.paternal.p_0.txt","FVG/duoHMM_results/FVG.generr_removed.total_recombination_counts.paternal.p_0.txt","VIS_KORCULA/duoHMM_results/VIS.post_MERLIN.generr_removed.total_recombination_counts.paternal.p_0.txt","VIS_KORCULA/duoHMM_results/KORCULA.post_MERLIN.generr_removed.total_recombination_counts.paternal.p_0.txt"),c("QTR/duoHMM_results/QTR.370K.post_MERLIN.max_0.05_missing.generr_removed.total_recombination_counts.paternal.p_0.no_double_recombinants_within_1000000bp.txt","QTR/duoHMM_results/QTR.610K.post_MERLIN.max_0.05_missing.generr_removed.total_recombination_counts.paternal.p_0.no_double_recombinants_within_1000000bp.txt","NTR/duoHMM_results/NTR.post_MERLIN.max_0.05_missing.generr_removed.total_recombination_counts.paternal.p_0.no_double_recombinants_within_1000000bp.txt","FC/duoHMM_results/FC.post_MERLIN.generr_removed.total_recombination_counts.paternal.p_0.no_double_recombinants_within_1000000bp.txt","ORCADES/duoHMM_results/ORCADES_raw_merged.max_0.05_missing.generr_removed.total_recombination_counts.paternal.p_0.no_double_recombinants_within_1000000bp.txt","CARL/duoHMM_results/CARL.generr_removed.total_recombination_counts.paternal.p_0.no_double_recombinants_within_1000000bp.txt","VB/duoHMM_results/VB.generr_removed.total_recombination_counts.paternal.p_0.no_double_recombinants_within_1000000bp.txt","FVG/duoHMM_results/FVG.generr_removed.total_recombination_counts.paternal.p_0.no_double_recombinants_within_1000000bp.txt","VIS_KORCULA/duoHMM_results/VIS.post_MERLIN.generr_removed.total_recombination_counts.paternal.p_0.no_double_recombinants_within_1000000bp.txt","VIS_KORCULA/duoHMM_results/KORCULA.post_MERLIN.generr_removed.total_recombination_counts.paternal.p_0.no_double_recombinants_within_1000000bp.txt"))
+
+#all.dirs=c("/home/hilary/maternal_age_recombination/exploring_duoHMM_calls","/home/hilary/maternal_age_recombination/exploring_duoHMM_calls_no_double_recombinants_within_1Mb/","/home/hilary/maternal_age_recombination/exploring_duoHMM_calls_post_MERLIN/","/home/hilary/maternal_age_recombination/exploring_duoHMM_calls_post_MERLIN_no_double_recombinants_within_1Mb/")
+
+all.dirs=c("/home/hilary/maternal_age_recombination/exploring_duoHMM_calls_post_MERLIN/","/home/hilary/maternal_age_recombination/exploring_duoHMM_calls_post_MERLIN_no_double_recombinants_within_1Mb/")
+mydir=all.dirs[x]
+
+files=all.files[[x]]
+names(files)=c("QTR.370","QTR.610K","NTR","FC","ORCADES.intersection","CARL","VB","FVG","VIS","KORCULA")
+
+#prefixes=c("no_MERLIN_for_new_cohorts","no_MERLIN_for_new_cohorts,no_double_recombinants_within_1Mb","post_MERLIN","post_MERLIN_no_double_recombinants_within_1Mb")
+prefixes=c("post_MERLIN","post_MERLIN_no_double_recombinants_within_1Mb")
+prefix=prefixes[x]
+
+#title.prefixes=list(c("duoHMM corrected","duoHMM corrected","duoHMM corrected","duoHMM corrected","duoHMM corrected","MERLIN + duoHMM corrected","MERLIN+duoHMM corrected","MERLIN+duoHMM corrected","duoHMM corrected","duoHMM corrected"),c("duoHMM corrected, no double xovers","duoHMM corrected, no double xovers","duoHMM corrected, no double xovers","duoHMM corrected, no double xovers","duoHMM corrected, no double xovers","MERLIN + duoHMM corrected, no double xovers","MERLIN + duoHMM corrected, no double xovers","MERLIN + duoHMM corrected, no double xovers","duoHMM corrected, no double xovers","duoHMM corrected, no double xovers"),c("MERLIN + duoHMM corrected","MERLIN + duoHMM corrected","MERLIN + duoHMM corrected","duoHMM corrected","duoHMM corrected","MERLIN + duoHMM corrected","MERLIN + duoHMM corrected","MERLIN + duoHMM corrected","duoHMM corrected","duoHMM corrected"),c("MERLIN + duoHMM corrected, no double xovers","MERLIN + duoHMM corrected, no double xovers","MERLIN + duoHMM corrected, no double xovers","duoHMM corrected, no double xovers","duoHMM corrected, no double xovers","MERLIN + duoHMM corrected, no double xovers","MERLIN + duoHMM corrected, no double xovers","MERLIN + duoHMM corrected, no double xovers","duoHMM corrected, no double xovers","duoHMM corrected, no double xovers"))
+
+title.prefixes=list(rep("MERLIN+duoHMM corrected",10),rep("MERLIN+duoHMM corrected, no double xovers",10))
+title.prefix=title.prefixes[[x]]
+
+
+remove.outliers=function(mat.counts,i){
+#remove families in FC cohort due to MZ twins/duplicates (76), and because of low paternal counts, reason unknown (52)
+if(i==4){
+mat.counts=mat.counts[!mat.counts[,1] %in% c("52", "76"),]
+}
+#remove families FVG to due to pedigree erros
+if(i==8){
+mat.counts=mat.counts[!mat.counts[,1] %in% c("69","148"),]
+}
+#remove families in VB: 143 and 64 each contain a cryptic pair of MZ twins or duplicate samples
+if(i==7){
+mat.counts=mat.counts[!mat.counts[,1] %in% c("64","143"),]
+}
+#remove families from NTR: 10689 seems to have three times the same sample; 11880 is strange (maybe too much missingness in father)
+if(i==3){
+mat.counts=mat.counts[!mat.counts[,1] %in% c("10689","11880"),]
+}
+return(mat.counts)
+}
+
+library(ggplot2)
+library(scales)
+
+#print out quantiles of distribution
+mycols=c("black","darkgreen","green","red3","red","purple","purple3","orange","orange2")
+mypch=c(21,21,24,21,24,21,24,21,24)
+
+for(p in p.cutoff){
+myfiles=gsub("p_0",paste("p_",p,sep=""),files)
+
+for(i in 1:length(myfiles)){
+pdf(paste0(mydir,"/","qqplots_for_NFTOOLS_and_duoHMM_p_",p,"_crossovers.",prefix,".",names(files)[i],".pdf"),height=7,width=14)
+par(mfrow=c(1,2))
+
+decode.means=c(42.81,25.9)
+parent=c("maternal","paternal")
+for(j in 1:2){
+if(j ==1){
+#for maternal
+matfiles=gsub("paternal","maternal",myfiles)
+mat.counts=read.delim(matfiles[i],header=T)
+#change the column names so the code below doesn't have to be changed
+colnames(mat.counts)[3:14]=c("father","mother", "total_fam_size","total_same_mother","total_same_father","total_same_parents","paternal_grandmother","paternal_grandfather","maternal_grandmother","maternal_grandfather","n_genotyped_paternal_grandparents", 
+"n_genotyped_maternal_grandparents")
+}else {
+matfiles=myfiles
+mat.counts=read.delim(matfiles[i],header=T)
+}
+
+mat.counts=remove.outliers(mat.counts,i)
+random.pat=rpois(n=nrow(mat.counts),lambda=decode.means[j])
+plot(sort(random.pat),sort(mat.counts$total),ylab=paste("Observed crossovers, duoHMM p > ",p,sep=""),xlab="Expected crossovers",main=paste0(parent[j],", ",title.prefix[i]," ",names(files)[i]),xlim=range(c(random.pat,mat.counts$total),cex.main=0.8)
+,ylim=range(c(random.pat,mat.counts$total)),col=alpha(mycols[1],0.4),bg=alpha(mycols[1],0.4),pch=mypch[1])
+
+#at least 3 kids with same father and mother; only two generations 
+if(sum(mat.counts$total_same_father>2 & mat.counts$mother !="0" & mat.counts$total_same_parents==mat.counts$total_same_father & mat.counts$n_genotyped_paternal_grandparents==0)>0){
+mat.counts2=mat.counts[mat.counts$total_same_father>2 & mat.counts$mother !="0" & mat.counts$total_same_parents==mat.counts$total_same_father & mat.counts$n_genotyped_paternal_grandparents==0,]
+random.pat=rpois(n=nrow(mat.counts2),lambda=decode.means[j])
+points(sort(random.pat),sort(mat.counts2$total),col=alpha(mycols[2],0.4),bg=alpha(mycols[2],0.4),pch=mypch[2])
+}
+
+#at least 3 kids with same father but mother missing for all; only two generations 
+if(sum(mat.counts$total_same_father>2 & mat.counts$mother =="0" & mat.counts$total_same_parents==mat.counts$total_same_father & mat.counts$n_genotyped_paternal_grandparents==0)>0){
+mat.counts2=mat.counts[mat.counts$total_same_father>2 & mat.counts$mother =="0" & mat.counts$total_same_parents==mat.counts$total_same_father & mat.counts$n_genotyped_paternal_grandparents==0,]
+random.pat=rpois(n=nrow(mat.counts2),lambda=decode.means[j])
+points(sort(random.pat),sort(mat.counts2$total),col=alpha(mycols[3],0.4),bg=alpha(mycols[3],0.4),pch=mypch[3])
+
+}
+#2 kids with same father and mother; only two generations 
+if(sum(mat.counts$total_same_father==2 & mat.counts$mother !="0" & mat.counts$total_same_parents==mat.counts$total_same_father & mat.counts$n_genotyped_paternal_grandparents==0)>0){
+mat.counts2=mat.counts[mat.counts$total_same_father==2 & mat.counts$mother !="0" & mat.counts$total_same_parents==mat.counts$total_same_father & mat.counts$n_genotyped_paternal_grandparents==0,]
+random.pat=rpois(n=nrow(mat.counts2),lambda=decode.means[j])
+points(sort(random.pat),sort(mat.counts2$total),col=alpha(mycols[4],0.4),bg=alpha(mycols[4],0.4),pch=mypch[4])
+
+}
+
+#2 kids with same father but mother missing for all; only two generations 
+if(sum(mat.counts$total_same_father==2 & mat.counts$mother =="0" & mat.counts$total_same_parents==mat.counts$total_same_father & mat.counts$n_genotyped_paternal_grandparents==0)>0){
+mat.counts2=mat.counts[mat.counts$total_same_father==2 & mat.counts$mother =="0" & mat.counts$total_same_parents==mat.counts$total_same_father & mat.counts$n_genotyped_paternal_grandparents==0,]
+random.pat=rpois(n=nrow(mat.counts2),lambda=decode.means[j])
+points(sort(random.pat),sort(mat.counts2$total),col=alpha(mycols[5],0.4),bg=alpha(mycols[5],0.4),pch=mypch[5])
+
+}
+
+#1 kid with same father and mother; only two generations 
+if(sum(mat.counts$total_same_father==1 & mat.counts$mother !="0" & mat.counts$total_same_parents==mat.counts$total_same_father & mat.counts$n_genotyped_paternal_grandparents==0)>0){
+mat.counts2=mat.counts[mat.counts$total_same_father==1 & mat.counts$mother !="0" & mat.counts$total_same_parents==mat.counts$total_same_father & mat.counts$n_genotyped_paternal_grandparents==0,]
+random.pat=rpois(n=nrow(mat.counts2),lambda=decode.means[j])
+points(sort(random.pat),sort(mat.counts2$total),col=alpha(mycols[6],0.4),bg=alpha(mycols[6],0.4),pch=mypch[6])
+
+}
+
+#1 kid with same father but mother missing for all; only two generations 
+if(sum(mat.counts$total_same_father==1 & mat.counts$mother =="0" & mat.counts$total_same_parents==mat.counts$total_same_father & mat.counts$n_genotyped_paternal_grandparents==0)>0){
+mat.counts2=mat.counts[mat.counts$total_same_father==1 & mat.counts$mother =="0" & mat.counts$total_same_parents==mat.counts$total_same_father & mat.counts$n_genotyped_paternal_grandparents==0,]
+random.pat=rpois(n=nrow(mat.counts2),lambda=decode.means[j])
+points(sort(random.pat),sort(mat.counts2$total),col=alpha(mycols[7],0.4),bg=alpha(mycols[7],0.4),pch=mypch[7])
+
+}
+
+#1 or both paternal grandparents, both parents same and genotyped
+if(sum(mat.counts$n_genotyped_paternal_grandparents>0 & mat.counts$mother !="0" & mat.counts$total_same_parents==mat.counts$total_same_father )>0){
+mat.counts2=mat.counts[mat.counts$n_genotyped_paternal_grandparents>0 & mat.counts$mother !="0" & mat.counts$total_same_parents==mat.counts$total_same_father,]
+random.pat=rpois(n=nrow(mat.counts2),lambda=decode.means[j])
+points(sort(random.pat),sort(mat.counts2$total),col=alpha(mycols[8],0.4),bg=alpha(mycols[8],0.4),pch=mypch[8])
+}
+
+#1 or both paternal grandparents, mother missing
+if(sum(mat.counts$n_genotyped_paternal_grandparents>0 & mat.counts$mother =="0" & mat.counts$total_same_parents==mat.counts$total_same_father )>0){
+mat.counts2=mat.counts[mat.counts$n_genotyped_paternal_grandparents>0 & mat.counts$mother =="0" & mat.counts$total_same_parents==mat.counts$total_same_father,]
+random.pat=rpois(n=nrow(mat.counts2),lambda=decode.means[j])
+points(sort(random.pat),sort(mat.counts2$total),col=alpha(mycols[9],0.4),bg=alpha(mycols[9],0.4),pch=mypch[9])
+
+}
+
+#either all 3 kids with same father or 1 or both paternal grandparents
+#if(sum(mat.counts$n_genotyped_paternal_grandparents>0|mat.counts$total_same_father>2)>0){
+#mat.counts2=mat.counts[mat.counts$n_genotyped_paternal_grandparents>0|mat.counts$total_same_father>2,]
+#}
+
+legend("bottomright",c("all families","3 kids, both parents","3 kids, one parent","2 kids, both parents","2 kids, one parent","1 kid, both parents","1 kid, one parent","3 generations, both parents","3 generations, one parent"),
+			    pch=mypch,col=mycols,cex=0.8,pt.bg=mycols)
+abline(a=0,b=1,col="black")
+
+}
+dev.off()
+}
+}
+
+
+mycols=c("black","darkgreen","green","red3","red","purple","purple3","orange","orange2","pink2","pink3")
+mypch=c(21,21,24,21,24,21,24,21,24,21,24)
+
+for(p in p.cutoff){
+myfiles=gsub("p_0",paste("p_",p,sep=""),files)
+
+for(i in 1:length(matfiles)){
+pdf(paste0(mydir,"/","qqplots_for_NFTOOLS_and_duoHMM_p_",p,"_crossovers.",prefix,".",names(files)[i],".informative_meioses_only.pdf"),height=7,width=14)
+par(mfrow=c(1,2))
+
+decode.means=c(42.81,25.9)
+parent=c("maternal","paternal")
+for(j in 1:2){
+if(j ==1){
+#for maternal
+matfiles=gsub("paternal","maternal",myfiles)
+mat.counts=read.delim(matfiles[i],header=T)
+#change the column names so the code below doesn't have to be changed
+colnames(mat.counts)[3:14]=c("father","mother", "total_fam_size","total_same_mother","total_same_father","total_same_parents","paternal_grandmother","paternal_grandfather","maternal_grandmother","maternal_grandfather","n_genotyped_paternal_grandparents", 
+"n_genotyped_maternal_grandparents")
+}else {
+matfiles=myfiles
+mat.counts=read.delim(matfiles[i],header=T)
+}
+
+mat.counts=remove.outliers(mat.counts,i)
+random.pat=rpois(n=nrow(mat.counts),lambda=decode.means[j])
+plot(sort(random.pat),sort(mat.counts$total),ylab=paste("Observed crossovers, duoHMM p > ",p,sep=""),xlab="Expected crossovers",main=paste0(parent[j],", ",title.prefix[i]," ",names(files)[i]),xlim=range(c(random.pat,mat.counts$total),cex.main=0.8)
+,ylim=range(c(random.pat,mat.counts$total)),col=alpha("white",0.4),bg=alpha("white",0.4),pch=mypch[1])
+
+#at least 3 kids with same father and mother; only two generations 
+if(sum(mat.counts$total_same_father>2 & mat.counts$mother !="0" & mat.counts$total_same_parents==mat.counts$total_same_father & mat.counts$n_genotyped_paternal_grandparents==0)>0){
+mat.counts2=mat.counts[mat.counts$total_same_father>2 & mat.counts$mother !="0" & mat.counts$total_same_parents==mat.counts$total_same_father & mat.counts$n_genotyped_paternal_grandparents==0,]
+random.pat=rpois(n=nrow(mat.counts2),lambda=decode.means[j])
+points(sort(random.pat),sort(mat.counts2$total),col=alpha(mycols[2],0.4),bg=alpha(mycols[2],0.4),pch=mypch[2])
+}
+
+#at least 3 kids with same father but mother missing for all; only two generations 
+if(sum(mat.counts$total_same_father>2 & mat.counts$mother =="0" & mat.counts$total_same_parents==mat.counts$total_same_father & mat.counts$n_genotyped_paternal_grandparents==0)>0){
+mat.counts2=mat.counts[mat.counts$total_same_father>2 & mat.counts$mother =="0" & mat.counts$total_same_parents==mat.counts$total_same_father & mat.counts$n_genotyped_paternal_grandparents==0,]
+random.pat=rpois(n=nrow(mat.counts2),lambda=decode.means[j])
+points(sort(random.pat),sort(mat.counts2$total),col=alpha(mycols[3],0.4),bg=alpha(mycols[3],0.4),pch=mypch[3])
+
+}
+
+#1  paternal grandparents, both parents same and genotyped
+if(sum(mat.counts$n_genotyped_paternal_grandparents==1 & mat.counts$mother !="0" & mat.counts$total_same_parents==mat.counts$total_same_father )>0){
+mat.counts2=mat.counts[mat.counts$n_genotyped_paternal_grandparents==1 & mat.counts$mother !="0" & mat.counts$total_same_parents==mat.counts$total_same_father,]
+random.pat=rpois(n=nrow(mat.counts2),lambda=decode.means[j])
+points(sort(random.pat),sort(mat.counts2$total),col=alpha(mycols[8],0.4),bg=alpha(mycols[8],0.4),pch=mypch[8])
+}
+
+#1  paternal grandparents, mother missing
+if(sum(mat.counts$n_genotyped_paternal_grandparents==1 & mat.counts$mother =="0" & mat.counts$total_same_parents==mat.counts$total_same_father )>0){
+mat.counts2=mat.counts[mat.counts$n_genotyped_paternal_grandparents==1 & mat.counts$mother =="0" & mat.counts$total_same_parents==mat.counts$total_same_father,]
+random.pat=rpois(n=nrow(mat.counts2),lambda=decode.means[j])
+points(sort(random.pat),sort(mat.counts2$total),col=alpha(mycols[9],0.4),bg=alpha(mycols[9],0.4),pch=mypch[9])
+}
+
+#2 paternal grandparents, both parents same and genotyped
+if(sum(mat.counts$n_genotyped_paternal_grandparents==2 & mat.counts$mother !="0" & mat.counts$total_same_parents==mat.counts$total_same_father )>0){
+mat.counts2=mat.counts[mat.counts$n_genotyped_paternal_grandparents==2 & mat.counts$mother !="0" & mat.counts$total_same_parents==mat.counts$total_same_father,]
+random.pat=rpois(n=nrow(mat.counts2),lambda=decode.means[j])
+points(sort(random.pat),sort(mat.counts2$total),col=alpha(mycols[10],0.4),bg=alpha(mycols[10],0.4),pch=mypch[10])
+}
+
+#2 paternal grandparents, mother missing
+if(sum(mat.counts$n_genotyped_paternal_grandparents==2 & mat.counts$mother =="0" & mat.counts$total_same_parents==mat.counts$total_same_father )>0){
+mat.counts2=mat.counts[mat.counts$n_genotyped_paternal_grandparents==2 & mat.counts$mother =="0" & mat.counts$total_same_parents==mat.counts$total_same_father,]
+random.pat=rpois(n=nrow(mat.counts2),lambda=decode.means[j])
+points(sort(random.pat),sort(mat.counts2$total),col=alpha(mycols[11],0.4),bg=alpha(mycols[11],0.4),pch=mypch[11])
+}
+
+legend("bottomright",c("3 kids, both parents","3 kids, 1 parent","1 grandparent, both parents","1 grandparent, 1 parent","2 grandparents, both parents","2 grandparents, 1 parent"),
+			    pch=mypch[c(2,3,8,9,10,11)],col=mycols[c(2,3,8,9,10,11)],cex=0.8,pt.bg=mycols[c(2,3,8,9,10,11)])
+abline(a=0,b=1,col="black")
+
+}
+dev.off()
+}
+}

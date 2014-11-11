@@ -1,0 +1,132 @@
+                                 PedStr
+                 Software for splitting large pedigrees
+         into fragments of no more than a user-specified bit size
+
+
+DESCRIPTION
+Genetic analysis of large extended human pedigrees pedigrees is 
+computationally challenging. Because of performance limits of current 
+soft- and hardware, investigators have to simplify the pedigree structure by 
+breaking pedigree loops or splitting a large pedigree into smaller fragments.
+
+PedStr is a software for splitting large pedigrees into fragments of no more 
+than a user-specified bit size. The algorithm specifically aims to split 
+large pedigrees where many close relatives are genotyped and to produce a set 
+of sub-pedigrees for haplotype reconstruction, IBD computation or multipoint 
+linkage analysis with the help of Lander-Green-Kruglyak algorithm. 
+
+The bit size is defined as twice the number of individuals with ancestors 
+in the pedigree minus the number of pedigree founders.
+
+We used modified PEDIG program (Boichard, 2002) for estimation of relationship 
+coefficients. 
+     Boichard D. PEDIG: a fortran package for pedigree analysis 
+     suited for large populations. In Proceedings of the 7th World 
+     Congress on Genetics Applied to Livestock Production, Montpellier, 
+     2002-08-19/23 2002; 32: 525-528.
+
+There are two versions of PedStr software: PedStr_H and PedStr_L.
+
+First version is called PedStr_H. It splits large pedigrees into 
+overlapping sub-pedigrees for haplotype reconstruction.
+
+Second version is called PedStr_L. It splits large pedigrees into 
+non-overlapping sub-pedigrees for IBD computation or multipoint linkage 
+analysis with the help of Lander-Green-Kruglyak algorithm.
+
+
+ALGORITHM
+
+In general, within the framework of our algorithm, we want to achieve a 
+compromise between the computational performance (as measured with the 
+maximal bit size) and linkage power or accuracy of haplotype reconstruction. 
+Our basic assumption is that the sub-pedigrees informative for multipoint 
+linkage analysis or haplotypes reconstruction should contain closely related 
+genotyped people, i.e. the total relationship between sub-pedigree members 
+should be as large as possible for a given bit size. 
+
+First step. Sub-pedigrees are built around each genotyped person step 
+by step including his/her closest relatives in the set of sub-pedigree members 
+and controlling the sub-pedigree bit size. 
+
+Second step. Total coefficient of relationship for all 
+measured person within each sub-pedigrees is calculated. 
+
+Third step is different for PedStr_H and PedStr_L versions.
+
+PedStr_H: a minimum set of overlapping sub-pedigrees which guarantees 
+high quality of haplotype reconstruction for all genotyped persons, is 
+selected.
+
+PedStr_L: a sub-pedigree with maximum total relationship is selected, 
+all members of this sub-pedigree are indicated as unmeasured in initial 
+data set; the steps are repeated until all members of initial pedigree
+are indicated ad unmeasured.
+
+In detail the algorith is described in algorithm.pdf file.
+
+
+PACKAGE STRUCTURE
+Each version is organized into three folders: BIN, EXAMPLE, and 
+SOURCE.
+BIN folder contains compiled executable files for Linux and Windows 
+operation systems.
+Examples of input and output files are in EXAMPLE folder.
+Source code files are in SOURCE folder.
+
+
+RUNNING
+For splitting pedigree with PedStr software user should copy executable file 
+PedStr_H or PedStr_L, file with options pedstr.ini and input file into one 
+folder.
+
+pedstr.ini is file where user should define names of input and output files,
+and maximum bit-size. For PedStr_L user should also define maximum number 
+of unmeasured relatives connecting a pair of measured persons. It allows us 
+to prevent building of large sub-pedigrees with only few measured 
+persons wich are distant relatives.
+
+Structure of input file.
+Pedigree data must be written in standart LINKAGE format.
+Each line in input file is a data on a person where should be:
+pedigree number
+person's ID (it should be consecutive from the first person to the last)
+father's ID
+mother's ID
+sex (1 - male, 2 - female)
+measured status (0 - unmeasured, any other number - measured)
+
+Separators are space (spaces), tab or coma.
+For example:
+1   1   0   0   1   0
+1   2   0   0   2   1
+1   3   0   0   2   0
+1   4   0   0   1   0
+1   5   1   2   2   1
+1   6   1   2   1   1
+1   7   4   3   1   0
+1   8   7   5   1   1
+
+
+For splitting pedigree user should run executable file (PedStr_H or PedStr_L).
+
+Structure of output file is the same as structure of input file.
+Each line in output file is a data on a person where are:
+sub-pedigree number (new numbering)
+person's ID (in accordance with input file)
+father's ID
+mother's ID
+sex (1 - male, 2 - female)
+measured status (0 - unmeasured, any other number - measured)
+
+PedStr is Copyright (c) 2008 Erasmus MC Rotterdam and ICG Novosibirsk
+This program is free software; you can redistribute it and/or modify it under 
+the terms of the GNU General Public License as published by the Free Software 
+Foundation, either version 2 of the License, or (at your opinion) any later 
+version. This program is distributed in the hope that it will be useful, but 
+WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or 
+FITNESS FOR A PARTICULAR PURPOSE.
+
+LANGUAGE:  FORTRAN77
+
+OS: Linux, Windows

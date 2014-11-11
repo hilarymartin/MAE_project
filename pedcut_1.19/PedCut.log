@@ -1,0 +1,27 @@
+
+	#############################
+	#  PedCut version 1.19      #
+	#  Fan Liu                  #
+	#  Erasmus MC Rotterdam     #
+	#############################
+
+Usage:
+    pedcut -p pedin -m maxbit [-o output] [-h help]
+
+Arguments:
+    Required
+
+    -p, --pedin
+        The input pedigree file
+
+    -m, --maxbit
+        The maximal bit-size of sub-pedigrees
+
+    Optional
+
+    -o, --out
+        The output file Default file name is SubPedigrees.csv
+
+    -h, --help
+        Display Usage and Arguments
+

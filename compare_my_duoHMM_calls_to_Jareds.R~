@@ -1,0 +1,10 @@
+dir1="/well/marchini/isolates/recombination-calls"
+jared.files=c("orkney889_b37-shapeit.nrec","clean-carl-flip_b37-shapeit.nrec","valborbera_b37-shapeit.nrec","clean-fvg-flip_b37-shapeit.nrec","VIS_for1000G-shapeit.nrec","KORCULA_for1000G-shapeit.nrec")
+names(jared.files)=c("ORCADES","CARL","VB","FVG","VIS","KORCULA")
+
+files=c("ORCADES/duoHMM_results/ORCADES_raw_merged.max_0.05_missing.generr_removed.total_recombination_counts.paternal.p_0.txt","CARL/duoHMM_results/CARL.generr_removed.total_recombination_counts.paternal.p_0.txt",
+    "VB/duoHMM_results/VB.generr_removed.total_recombination_counts.paternal.p_0.txt","FVG/duoHMM_results/FVG.generr_removed.total_recombination_counts.paternal.p_0.txt",
+    "VIS_KORCULA/duoHMM_results/VIS.generr_removed.total_recombination_counts.paternal.p_0.txt","VIS_KORCULA/duoHMM_results/KORCULA.generr_removed.total_recombination_counts.paternal.p_0.txt")
+names(files)=c("ORCADES","CARL","VB","FVG","VIS","KORCULA")
+
+

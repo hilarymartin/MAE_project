@@ -1,0 +1,205 @@
+setwd("/gpfs1/well/donnelly/hilary/maternal_age_and_recombination")
+
+mydir="/home/hilary/maternal_age_recombination/comparing_duoHMM_to_NFTOOLS"
+
+QTR.data=read.delim("/well/donnelly/hilary/TwinRecombination/Bayesian_modeling/input_data/all_Brisbane_crossovers.k5.chips_separated.excluding_triplets_and_aneuploidies.txt",
+    header=T,stringsAsFactors=F)
+rownames(QTR.data)=QTR.data$child
+QTR610K.data=QTR.data[QTR.data$chip =="610K",]
+QTR370K.data=QTR.data[QTR.data$chip =="370K",]
+
+#NTR
+NTR.data=read.delim("/well/donnelly/hilary/TwinRecombination/Bayesian_modeling/input_data/crossover_counts_HMM_and_NFTOOLS.families_with_min_3_unique_kids.all.txt",header=T,stringsAsFactors=F)
+NTR.data$chip="NTR"
+NTR.data=NTR.data[,c("GID", "FATH","MOTH","chip", "NFTOOLS_mat" ,"NFTOOLS_pat","mat.age.birth","pat.age.birth")]
+colnames(NTR.data)=colnames(QTR.data)
+rownames(NTR.data)=NTR.data$child
+#FC
+fc.data=read.delim("/well/donnelly/hilary/TwinRecombination/Bayesian_modeling/input_data/FC_NFTOOLS_counts.k5.txt",header=T,stringsAsFactors=F)
+fc.data$chip="FC"
+fc.data$child=rownames(fc.data)
+fc.data=fc.data[,c("child","father","mother","chip","mat.count","pat.count","mat.age","pat.age")]
+colnames(fc.data)=colnames(QTR.data)
+rownames(fc.data)=fc.data$child
+families=as.integer(unlist(lapply(strsplit(rownames(fc.data),"_"),function(x){return(x[2])})))
+rownames(fc.data)=paste(as.character(families),"-",rownames(fc.data),sep="")
+fc.data$child=paste(as.character(families),"-",fc.data$child,sep="")
+fc.data$mother=paste(as.character(families),"-",fc.data$mother,sep="")
+fc.data$father=paste(as.character(families),"-",fc.data$father,sep="")
+
+library(scales)
+library(ggplot2)
+
+compare.NFTOOLS.to.duoHMM=function(NFTOOLS,duoHMM.mat.file,duoHMM.pat.file,mydir,prefix,p.cutoff){
+duoHMM.mat=read.delim(duoHMM.mat.file,header=T,stringsAsFactors=F)
+rownames(duoHMM.mat)=duoHMM.mat$child
+duoHMM.pat=read.delim(duoHMM.pat.file,header=T,stringsAsFactors=F)
+rownames(duoHMM.pat)=duoHMM.pat$child
+NFTOOLS.mat=NFTOOLS[rownames(NFTOOLS) %in% rownames(duoHMM.mat),c("child","mat.count")]
+NFTOOLS.pat=NFTOOLS[rownames(NFTOOLS) %in% rownames(duoHMM.mat),c("child","pat.count")]
+duoHMM.mat2=duoHMM.mat[rownames(duoHMM.mat) %in% rownames(NFTOOLS.mat),c("child","total")]
+duoHMM.pat2=duoHMM.pat[rownames(duoHMM.pat) %in% rownames(NFTOOLS.pat),c("child","total")]
+
+
+pdf(paste(mydir,"/","comparing_NFTOOLS_to_duoHMM_p_",p.cutoff,"_maternal_crossovers.",prefix,".pdf",sep=""),height=5,width=5)
+plot(NFTOOLS.mat[rownames(duoHMM.mat2),"mat.count"],duoHMM.mat2$total,main=paste("maternal ",prefix,", duoHMM p > ",p.cutoff,sep=""),xlab="NFTOOLS count",ylab="duoHMM count",col=alpha("black",0.4),bg=alpha("black",0.4),pch=21)
+abline(a=0,b=1,col="red")
+legend("topleft",paste("rho = ",round(cor(NFTOOLS.mat[rownames(duoHMM.mat2),"mat.count"],duoHMM.mat2$total,method="pearson"),2),sep=""))
+dev.off()
+
+pdf(paste(mydir,"/","comparing_NFTOOLS_to_duoHMM_p_",p.cutoff,"_paternal_crossovers.",prefix,".pdf",sep=""),height=5,width=5)
+plot(NFTOOLS.pat[rownames(duoHMM.pat2),"pat.count"],duoHMM.pat2$total,main=paste("paternal ",prefix,", duoHMM p > ",p.cutoff,sep=""),xlab="NFTOOLS count",ylab="duoHMM count",col=alpha("black",0.4),bg=alpha("black",0.4),pch=21)
+abline(a=0,b=1,col="red")
+legend("topleft",paste("rho = ",round(cor(NFTOOLS.pat[rownames(duoHMM.pat2),"pat.count"],duoHMM.pat2$total,method="pearson"),2),sep=""))
+dev.off()
+
+random.mat=rpois(n=nrow(duoHMM.mat2),lambda=42.81)
+random.pat=rpois(n=nrow(duoHMM.pat2),lambda=25.9)
+
+pdf(paste0(mydir,"/","qqplots_for_NFTOOLS_and_duoHMM_p_",p.cutoff,"_crossovers.",prefix,".pdf"),height=5,width=10)
+par(mfrow=c(1,2))
+plot(sort(random.mat),sort(NFTOOLS.mat[rownames(duoHMM.mat2),"mat.count"]),ylab="Observed crossovers",xlab="Expected crossovers",main=paste0("maternal ",prefix,", duoHMM p > ",p.cutoff),xlim=range(c(random.mat,NFTOOLS.mat$mat.count,duoHMM.mat2$total))
+,ylim=range(c(random.mat,NFTOOLS.mat$mat.count,duoHMM.mat2$total)),col=alpha("black",0.4),bg=alpha("blue",0.4),pch=21)
+points(sort(random.mat),sort(duoHMM.mat2$total),col=alpha("black",0.4),bg=alpha("red",0.4),pch=21)
+abline(a=0,b=1,col="black")
+legend("bottomright",c("NFTOOLS k=5",paste0("duoHMM p > ",p.cutoff)),pch=19,col=c("blue","red"))
+
+plot(sort(random.pat),sort(NFTOOLS.pat[rownames(duoHMM.pat2),"pat.count"]),ylab="Observed crossovers",xlab="Expected crossovers",main=paste0("paternal ",prefix,", duoHMM p > ",p.cutoff),xlim=range(c(random.pat,NFTOOLS.pat$pat.count,duoHMM.pat2$total))
+,ylim=range(c(random.pat,NFTOOLS.pat$pat.count,duoHMM.pat2$total)),col=alpha("black",0.4),bg=alpha("blue",0.4),pch=21)
+points(sort(random.pat),sort(duoHMM.pat2$total),col=alpha("black",0.4),bg=alpha("red",0.4),pch=21)
+legend("bottomright",c("NFTOOLS k=5",paste0("duoHMM p > ",p.cutoff)),pch=19,col=c("blue","red"))
+abline(a=0,b=1,col="black")
+dev.off()
+
+}
+if(FALSE){
+compare.NFTOOLS.to.duoHMM(QTR610K.data,"QTR/duoHMM_results/QTR.610K.generr_removed.total_recombination_counts.maternal.p_0.5.txt","QTR/duoHMM_results/QTR.610K.generr_removed.total_recombination_counts.paternal.p_0.5.txt",mydir,"QTR 610K",0.5)
+compare.NFTOOLS.to.duoHMM(QTR370K.data,"QTR/duoHMM_results/QTR.370K.generr_removed.total_recombination_counts.maternal.p_0.5.txt","QTR/duoHMM_results/QTR.370K.generr_removed.total_recombination_counts.paternal.p_0.5.txt",mydir,"QTR 370K",0.5)
+
+compare.NFTOOLS.to.duoHMM(QTR370K.data,"QTR/duoHMM_results/QTR.370K.post_MERLIN.max_0.05_missing.generr_removed.total_recombination_counts.maternal.p_0.5.txt",
+"QTR/duoHMM_results/QTR.370K.post_MERLIN.max_0.05_missing.generr_removed.total_recombination_counts.paternal.p_0.5.txt",mydir,"QTR_370K_post_MERLIN",0.5)
+compare.NFTOOLS.to.duoHMM(QTR370K.data,"QTR/duoHMM_results/QTR.370K.post_MERLIN.max_0.05_missing.generr_removed.total_recombination_counts.maternal.p_0.5.no_double_recombinants_within_1000000bp.txt",
+"QTR/duoHMM_results/QTR.370K.post_MERLIN.max_0.05_missing.generr_removed.total_recombination_counts.paternal.p_0.5.no_double_recombinants_within_1000000bp.txt",mydir,"QTR_370K_post_MERLIN_no_double_xovers",0.5)
+
+
+
+compare.NFTOOLS.to.duoHMM(QTR370K.data,"QTR/duoHMM_results/QTR.370K.post_MERLIN.max_0.05_missing.generr_removed.total_recombination_counts.maternal.summing_probabilities.txt",
+"QTR/duoHMM_results/QTR.370K.post_MERLIN.max_0.05_missing.generr_removed.total_recombination_counts.paternal.summing_probabilities.txt",mydir,"QTR_370K_post_MERLIN_summing_probabilities",0)
+compare.NFTOOLS.to.duoHMM(QTR370K.data,"QTR/duoHMM_results/QTR.370K.post_MERLIN.max_0.05_missing.generr_removed.total_recombination_counts.maternal.summing_probabilities.no_double_recombinants_within_1000000bp.txt",
+"QTR/duoHMM_results/QTR.370K.post_MERLIN.max_0.05_missing.generr_removed.total_recombination_counts.paternal.summing_probabilities.no_double_recombinants_within_1000000bp.txt",mydir,"QTR_370K_post_MERLIN_summing_probabilities_no_double_xovers",0)
+
+
+
+compare.NFTOOLS.to.duoHMM(QTR610K.data,"QTR/duoHMM_results/QTR.610K.post_MERLIN.max_0.05_missing.generr_removed.total_recombination_counts.maternal.p_0.5.txt",
+"QTR/duoHMM_results/QTR.610K.post_MERLIN.max_0.05_missing.generr_removed.total_recombination_counts.paternal.p_0.5.txt",mydir,"QTR_610K_post_MERLIN",0.5)
+compare.NFTOOLS.to.duoHMM(QTR610K.data,"QTR/duoHMM_results/QTR.610K.post_MERLIN.max_0.05_missing.generr_removed.total_recombination_counts.maternal.p_0.5.no_double_recombinants_within_1000000bp.txt",
+"QTR/duoHMM_results/QTR.610K.post_MERLIN.max_0.05_missing.generr_removed.total_recombination_counts.paternal.p_0.5.no_double_recombinants_within_1000000bp.txt",mydir,"QTR_610K_post_MERLIN_no_double_xovers",0.5)
+
+
+compare.NFTOOLS.to.duoHMM(QTR610K.data,"QTR/duoHMM_results/QTR.610K.post_MERLIN.max_0.05_missing.generr_removed.total_recombination_counts.maternal.summing_probabilities.txt",
+"QTR/duoHMM_results/QTR.610K.post_MERLIN.max_0.05_missing.generr_removed.total_recombination_counts.paternal.summing_probabilities.txt",mydir,"QTR_610K_post_MERLIN_summing_probabilities",0)
+compare.NFTOOLS.to.duoHMM(QTR610K.data,"QTR/duoHMM_results/QTR.610K.post_MERLIN.max_0.05_missing.generr_removed.total_recombination_counts.maternal.summing_probabilities.no_double_recombinants_within_1000000bp.txt",
+"QTR/duoHMM_results/QTR.610K.post_MERLIN.max_0.05_missing.generr_removed.total_recombination_counts.paternal.summing_probabilities.no_double_recombinants_within_1000000bp.txt",mydir,"QTR_610K_post_MERLIN_summing_probabilities_no_double_xovers",0)
+
+
+
+compare.NFTOOLS.to.duoHMM(NTR.data,"NTR/duoHMM_results/NTR.generr_removed.total_recombination_counts.maternal.p_0.5.txt","NTR/duoHMM_results/NTR.generr_removed.total_recombination_counts.paternal.p_0.5.txt",mydir,"NTR",0.5)
+compare.NFTOOLS.to.duoHMM(NTR.data,"NTR/duoHMM_results/NTR.post_MERLIN.max_0.05_missing.generr_removed.total_recombination_counts.maternal.p_0.5.txt","NTR/duoHMM_results/NTR.post_MERLIN.max_0.05_missing.generr_removed.total_recombination_counts.paternal.p_0.5.txt",
+mydir,"NTR_post_MERLIN",0.5)
+
+compare.NFTOOLS.to.duoHMM(NTR.data,"NTR/duoHMM_results/NTR.post_MERLIN.max_0.05_missing.generr_removed.total_recombination_counts.maternal.p_0.5.no_double_recombinants_within_1000000bp.txt",
+"NTR/duoHMM_results/NTR.post_MERLIN.max_0.05_missing.generr_removed.total_recombination_counts.paternal.p_0.5.no_double_recombinants_within_1000000bp.txt",mydir,"NTR_post_MERLIN_no_double_xovers",0.5)
+
+
+compare.NFTOOLS.to.duoHMM(fc.data,"FC/duoHMM_results/FC.generr_removed.total_recombination_counts.maternal.p_0.5.txt","FC/duoHMM_results/FC.generr_removed.total_recombination_counts.paternal.p_0.5.txt",mydir,"FC",0.5)
+compare.NFTOOLS.to.duoHMM(fc.data,"FC/duoHMM_results/FC.post_MERLIN.generr_removed.total_recombination_counts.maternal.p_0.5.txt","FC/duoHMM_results/FC.post_MERLIN.generr_removed.total_recombination_counts.paternal.p_0.5.txt",mydir,"FC_post_MERLIN",0.5)
+
+compare.NFTOOLS.to.duoHMM(fc.data,"FC/duoHMM_results/FC.post_MERLIN.generr_removed.total_recombination_counts.maternal.p_0.5.no_double_recombinants_within_1000000bp.txt",
+                          "FC/duoHMM_results/FC.post_MERLIN.generr_removed.total_recombination_counts.paternal.p_0.5.no_double_recombinants_within_1000000bp.txt",mydir,"FC_post_MERLIN_no_double_xovers",0.5)
+
+compare.NFTOOLS.to.duoHMM(QTR610K.data,"QTR/duoHMM_results/QTR.610K.generr_removed.total_recombination_counts.maternal.p_0.9.txt","QTR/duoHMM_results/QTR.610K.generr_removed.total_recombination_counts.paternal.p_0.9.txt",mydir,"QTR 610K",0.9)
+compare.NFTOOLS.to.duoHMM(QTR370K.data,"QTR/duoHMM_results/QTR.370K.generr_removed.total_recombination_counts.maternal.p_0.9.txt","QTR/duoHMM_results/QTR.370K.generr_removed.total_recombination_counts.paternal.p_0.9.txt",mydir,"QTR 370K",0.9)
+compare.NFTOOLS.to.duoHMM(NTR.data,"NTR/duoHMM_results/NTR.generr_removed.total_recombination_counts.maternal.p_0.9.txt","NTR/duoHMM_results/NTR.generr_removed.total_recombination_counts.paternal.p_0.9.txt",mydir,"NTR",0.9)
+compare.NFTOOLS.to.duoHMM(fc.data,"FC/duoHMM_results/FC.generr_removed.total_recombination_counts.maternal.p_0.9.txt","FC/duoHMM_results/FC.generr_removed.total_recombination_counts.paternal.p_0.9.txt",mydir,"FC",0.9)
+
+}
+
+
+
+compare.NFTOOLS.to.duoHMM.v2=function(NFTOOLS,duoHMM.file,mydir,prefix,p.cutoff){
+duoHMM = read.delim(duoHMM.file,header=T,stringsAsFactors=F)
+colnames(duoHMM)[7]="total"
+duoHMM.mat=duoHMM[duoHMM$sex=="Female",]
+rownames(duoHMM.mat)=duoHMM.mat$CHILD
+duoHMM.pat=duoHMM[duoHMM$sex=="Male",]
+rownames(duoHMM.pat)=duoHMM.pat$CHILD
+
+
+NFTOOLS.mat=NFTOOLS[rownames(NFTOOLS) %in% rownames(duoHMM.mat),c("child","mat.count")]
+NFTOOLS.pat=NFTOOLS[rownames(NFTOOLS) %in% rownames(duoHMM.mat),c("child","pat.count")]
+
+duoHMM.mat2=duoHMM.mat[rownames(duoHMM.mat) %in% rownames(NFTOOLS.mat),c("CHILD","total")]
+duoHMM.pat2=duoHMM.pat[rownames(duoHMM.pat) %in% rownames(NFTOOLS.pat),c("CHILD","total")]
+
+
+pdf(paste(mydir,"/","comparing_NFTOOLS_to_duoHMM_p_",p.cutoff,"_maternal_crossovers.",prefix,".pdf",sep=""),height=5,width=5)
+plot(NFTOOLS.mat[rownames(duoHMM.mat2),"mat.count"],duoHMM.mat2$total,main=paste("maternal ",prefix,", duoHMM p > ",p.cutoff,sep=""),xlab="NFTOOLS count",ylab="duoHMM count",col=alpha("black",0.4),bg=alpha("black",0.4),pch=21)
+abline(a=0,b=1,col="red")
+legend("topleft",paste("rho = ",round(cor(NFTOOLS.mat[rownames(duoHMM.mat2),"mat.count"],duoHMM.mat2$total,method="pearson"),2),sep=""))
+dev.off()
+
+pdf(paste(mydir,"/","comparing_NFTOOLS_to_duoHMM_p_",p.cutoff,"_paternal_crossovers.",prefix,".pdf",sep=""),height=5,width=5)
+plot(NFTOOLS.pat[rownames(duoHMM.pat2),"pat.count"],duoHMM.pat2$total,main=paste("paternal ",prefix,", duoHMM p > ",p.cutoff,sep=""),xlab="NFTOOLS count",ylab="duoHMM count",col=alpha("black",0.4),bg=alpha("black",0.4),pch=21)
+abline(a=0,b=1,col="red")
+legend("topleft",paste("rho = ",round(cor(NFTOOLS.pat[rownames(duoHMM.pat2),"pat.count"],duoHMM.pat2$total,method="pearson"),2),sep=""))
+dev.off()
+
+random.mat=rpois(n=nrow(duoHMM.mat2),lambda=42.81)
+random.pat=rpois(n=nrow(duoHMM.pat2),lambda=25.9)
+
+pdf(paste0(mydir,"/","qqplots_for_NFTOOLS_and_duoHMM_p_",p.cutoff,"_crossovers.",prefix,".pdf"),height=5,width=10)
+par(mfrow=c(1,2))
+plot(sort(random.mat),sort(NFTOOLS.mat[rownames(duoHMM.mat2),"mat.count"]),ylab="Observed crossovers",xlab="Expected crossovers",main=paste0("maternal ",prefix,", duoHMM p > ",p.cutoff),xlim=range(c(random.mat,NFTOOLS.mat$mat.count,duoHMM.mat2$total))
+,ylim=range(c(random.mat,NFTOOLS.mat$mat.count,duoHMM.mat2$total)),col=alpha("black",0.4),bg=alpha("blue",0.4),pch=21)
+points(sort(random.mat),sort(duoHMM.mat2$total),col=alpha("black",0.4),bg=alpha("red",0.4),pch=21)
+abline(a=0,b=1,col="black")
+legend("bottomright",c("NFTOOLS k=5",paste0("duoHMM p > ",p.cutoff)),pch=19,col=c("blue","red"))
+
+plot(sort(random.pat),sort(NFTOOLS.pat[rownames(duoHMM.pat2),"pat.count"]),ylab="Observed crossovers",xlab="Expected crossovers",main=paste0("paternal ",prefix,", duoHMM p > ",p.cutoff),xlim=range(c(random.pat,NFTOOLS.pat$pat.count,duoHMM.pat2$total))
+,ylim=range(c(random.pat,NFTOOLS.pat$pat.count,duoHMM.pat2$total)),col=alpha("black",0.4),bg=alpha("blue",0.4),pch=21)
+points(sort(random.pat),sort(duoHMM.pat2$total),col=alpha("black",0.4),bg=alpha("red",0.4),pch=21)
+legend("bottomright",c("NFTOOLS k=5",paste0("duoHMM p > ",p.cutoff)),pch=19,col=c("blue","red"))
+abline(a=0,b=1,col="black")
+dev.off()
+
+}
+mydir="/home/hilary/maternal_age_recombination/comparing_duoHMM_v2_to_NFTOOLS/"
+
+
+fc.data=read.delim("/well/donnelly/hilary/TwinRecombination/Bayesian_modeling/input_data/FC_NFTOOLS_counts.k5.txt",header=T,stringsAsFactors=F)
+fc.data$chip="FC"
+fc.data$child=rownames(fc.data)
+fc.data=fc.data[,c("child","father","mother","chip","mat.count","pat.count","mat.age","pat.age")]
+colnames(fc.data)=colnames(QTR.data)
+rownames(fc.data)=fc.data$child
+families=as.integer(unlist(lapply(strsplit(rownames(fc.data),"_"),function(x){return(x[2])})))
+rownames(fc.data)=paste(as.character(families),"_",rownames(fc.data),sep="")
+fc.data$child=paste(as.character(families),"_",fc.data$child,sep="")
+fc.data$mother=paste(as.character(families),"_",fc.data$mother,sep="")
+fc.data$father=paste(as.character(families),"_",fc.data$father,sep="")
+
+
+compare.NFTOOLS.to.duoHMM.v2(QTR610K.data,
+"QTR/duoHMM_results/QTR_minus_MZs.610K.all.post_MERLIN.max_0.05_missing.generr_removed.recombination_count.p_0.5.annotated.double_xovers_within_X_SNPs_removed.txt",
+                          mydir,"QTR 610K",0.5)
+compare.NFTOOLS.to.duoHMM.v2(QTR370K.data,"QTR/duoHMM_results/QTR_minus_MZs.370K.all.post_MERLIN.max_0.05_missing.generr_removed.recombination_count.p_0.5.annotated.double_xovers_within_X_SNPs_removed.txt",mydir,
+                             "QTR 370K",0.5)
+compare.NFTOOLS.to.duoHMM.v2(NTR.data,"NTR/duoHMM_results/NTR_minus_MZs.all.post_MERLIN.max_0.05_missing.generr_removed.recombination_count.p_0.5.annotated.double_xovers_within_X_SNPs_removed.txt",mydir,"NTR",0.5)
+compare.NFTOOLS.to.duoHMM.v2(fc.data,
+      "FC/duoHMM_results/FC.all.post_MERLIN.generr_removed.recombination_count.p_0.5.annotated.double_xovers_within_X_SNPs_removed.txt",mydir,"FC",0.5)
+
+
+
+
+
+

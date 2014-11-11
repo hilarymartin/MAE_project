@@ -1,0 +1,82 @@
+options(echo=TRUE) # if you want see commands in output file
+args <- commandArgs(trailingOnly = TRUE)
+
+recomb.file=args[1]
+sample.file = args[2]#sample.file="SHAPEIT_results/FVG.chr1.generr_removed.SHAPEIT_phased.sample"
+
+out.prefix = args[3]#out.prefix="duoHMM_results/FVG.generr_removed.total_recombination_counts"
+
+samples=read.delim(sample.file,header=F,sep="",stringsAsFactors=F,skip=2)
+samples=samples[,-c(3,7)]
+samples2=cbind(as.character(samples[,1]),as.character(samples[,2]),as.character(samples[,3]),as.character(samples[,4]),as.character(samples[,5]))
+rownames(samples2) = samples2[,2]
+samples2=as.data.frame(samples2,stringsAsFactors=F)
+#remove parents not genotyped
+samples2[! samples[,3] %in% samples[,2],3]="0"
+samples2[! samples[,4] %in% samples[,2],4]="0"
+
+samples2$total_fam_size=sapply(samples2[,1],function(x){sum(samples2[,1]==x)})
+samples2$total_same_father=sapply(samples2[,2],function(x){sum(samples2[,3]==samples2[x,3])})
+samples2$total_same_mother=sapply(samples2[,2],function(x){sum(samples2[,4]==samples2[x,4])})
+samples2$total_same_parents=sapply(samples2[,2],function(x){sum(samples2[,4]==samples2[x,4] & samples2[,3]==samples2[x,3])})
+samples2$total_same_father[samples2[,3]=="0"]=0
+samples2$total_same_mother[samples2[,4]=="0"]=0
+samples2$total_same_parents[samples2[,4]=="0" & samples2[,3]=="0"]=0
+
+samples2$maternal_grandmother="0"
+samples2$maternal_grandmother[samples2[,4] %in% samples2[,2]] = samples2[samples2[samples2[,4]%in% samples2[,2],4],4]
+samples2$maternal_grandfather="0"
+samples2$maternal_grandfather[samples2[,4] %in% samples2[,2]] = samples2[samples2[samples2[,4]%in% samples2[,2],4],3]
+
+samples2$paternal_grandmother="0"
+samples2$paternal_grandmother[samples2[,3] %in% samples2[,2]] = samples2[samples2[samples2[,3]%in% samples2[,2],3],4]
+samples2$paternal_grandfather="0"
+samples2$paternal_grandfather[samples2[,3] %in% samples2[,2]] = samples2[samples2[samples2[,3]%in% samples2[,2],3],3]
+
+samples2$n_genotyped_maternal_grandparents =rowSums(samples2[,c("maternal_grandmother","maternal_grandfather")]!="0")
+samples2$n_genotyped_paternal_grandparents =rowSums(samples2[,c("paternal_grandmother","paternal_grandfather")]!="0")
+samples2$n_genotyped_grandparents =samples2$n_genotyped_maternal_grandparents+samples2$n_genotyped_paternal_grandparents
+samples2$n_genotyped_children = sapply(samples2[,2],function(x){sum(samples[,3] == x | samples[,4] == x)})
+
+halfsibs=samples2[(samples2$total_same_parents!=samples2$total_same_mother&samples2[,4]!="0")|(samples2$total_same_parents!=samples2$total_same_father & samples2[,3]!="0"),]
+samples2$possible_halfsib=((samples2$total_same_parents!=samples2$total_same_mother&samples2[,4]!="0")|(samples2$total_same_parents!=samples2$total_same_father & samples2[,3]!="0"))
+
+maternal=samples2[samples2[,4] != "0",c(1,2,4,3,6:ncol(samples2))]
+paternal=samples2[samples2[,3] != "0",c(1,2,3,4,6:ncol(samples2))]
+
+rownames(maternal)=maternal[,2]
+rownames(paternal)=paternal[,2]
+colnames(maternal)[1:4]=c("family","child","mother","father")
+colnames(paternal)[1:4]=c("family","child","father","mother")
+
+all.recomb=NULL
+for(i in 1:22){
+recomb.file2=gsub("1.",paste(i,".",sep=""),recomb.file,fixed=T)
+
+recomb=read.delim(recomb.file2,header=T,sep="\t",stringsAsFactors=F)
+recomb$chr=i
+all.recomb=rbind(all.recomb,recomb)
+recomb2=recomb
+
+maternal=data.frame(maternal,rep(0,nrow(maternal)),stringsAsFactors=F)
+colnames(maternal)[ncol(maternal)]=paste("chr",i,sep="")
+maternal.counts=apply(maternal[,2:3],1,function(indivs){sum(recomb2[recomb2[,1]==indivs[1] & recomb2[,2]==indivs[2],"PROB_RECOMBINATION"])})
+maternal[names(maternal.counts),ncol(maternal)]=maternal.counts
+
+
+paternal=data.frame(paternal,rep(0,nrow(paternal)),stringsAsFactors=F)
+colnames(paternal)[ncol(paternal)]=paste("chr",i,sep="")
+paternal.counts=apply(paternal[,2:3],1,function(indivs){sum(recomb2[recomb2[,1]==indivs[1] & recomb2[,2]==indivs[2],"PROB_RECOMBINATION"])})
+paternal[names(paternal.counts),ncol(paternal)]=paternal.counts
+
+}
+
+maternal$total=rowSums(maternal[,grep("chr",colnames(maternal))])
+paternal$total=rowSums(paternal[,grep("chr",colnames(paternal))])
+
+
+write.table(maternal,paste(out.prefix,".maternal.summing_probabilities.txt",sep=""),quote=F,sep="\t",row.names=F)
+write.table(paternal,paste(out.prefix,".paternal.summing_probabilities.txt",sep=""),quote=F,sep="\t",row.names=F)
+
+
+

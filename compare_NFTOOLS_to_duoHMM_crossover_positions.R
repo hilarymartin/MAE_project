@@ -1,0 +1,283 @@
+setwd("/gpfs1/well/donnelly/hilary/maternal_age_and_recombination")
+
+mydir="/home/hilary/maternal_age_recombination/comparing_duoHMM_to_NFTOOLS"
+if(FALSE){
+compare.NFTOOLS.to.duoHMM.overlap=function(NFTOOLS.file,duoHMM.file,sample.file,prefix,thisdir,p.cutoff,informative.only){
+if(FALSE){
+NFTOOLS.file="/well/donnelly/hilary/TwinRecombination/NFTOOLS/DATA/all_autosomes.Brisbane_data.610K.filtered.max_1pc_missing.inrecomb_k5.listchr.txt.events"
+duoHMM.file="/well/donnelly/hilary/maternal_age_and_recombination/QTR/duoHMM_results/QTR_minus_MZs.610K.1.post_MERLIN.max_0.05_missing.generr_removed.recombinations.txt"
+sample.file="/well/donnelly/hilary/maternal_age_and_recombination/QTR/SHAPEIT_results/QTR_minus_MZs.610K.1.post_MERLIN.max_0.05_missing.generr_removed.SHAPEIT_phased.sample"
+prefix="QTR_610K"
+thisdir="/well/donnelly/hilary/maternal_age_and_recombination/QTR/duoHMM_results/"
+p.cutoff=0
+informative.only=FALSE
+}
+NFTOOLS.data=read.delim(NFTOOLS.file,header=T,stringsAsFactors=F)
+if(length(grep("FC",prefix))>0){#rename samples since IDs were different for NFTOOLS vs duoHMM
+families=as.integer(unlist(lapply(strsplit(NFTOOLS.data$child,"_"),function(x){return(x[2])})))
+NFTOOLS.data$child=paste(as.character(families),"-",NFTOOLS.data$child,sep="")
+NFTOOLS.data$chr=as.integer(gsub("k","",NFTOOLS.data$chr))
+}
+
+samples=read.delim(sample.file,header=F,sep="",stringsAsFactors=F,skip=2)
+samples=samples[,-c(3,7)]
+samples2=cbind(as.character(samples[,1]),as.character(samples[,2]),as.character(samples[,3]),as.character(samples[,4]),as.character(samples[,5]))
+rownames(samples2) = samples2[,2]
+samples2=as.data.frame(samples2,stringsAsFactors=F)
+#remove parents not genotyped                                                                                                                                                                                                                                                 
+samples2[! samples[,3] %in% samples[,2],3]="0"
+samples2[! samples[,4] %in% samples[,2],4]="0"
+
+samples2$total_fam_size=sapply(samples2[,1],function(x){sum(samples2[,1]==x)})
+samples2$total_same_father=sapply(samples2[,2],function(x){sum(samples2[,3]==samples2[x,3])})
+samples2$total_same_mother=sapply(samples2[,2],function(x){sum(samples2[,4]==samples2[x,4])})
+samples2$total_same_parents=sapply(samples2[,2],function(x){sum(samples2[,4]==samples2[x,4] & samples2[,3]==samples2[x,3])})
+samples2$total_same_father[samples2[,3]=="0"]=0
+samples2$total_same_mother[samples2[,4]=="0"]=0
+samples2$total_same_parents[samples2[,4]=="0" & samples2[,3]=="0"]=0
+
+samples2$maternal_grandmother="0"
+samples2$maternal_grandmother[samples2[,4] %in% samples2[,2]] = samples2[samples2[samples2[,4]%in% samples2[,2],4],4]
+samples2$maternal_grandfather="0"
+samples2$maternal_grandfather[samples2[,4] %in% samples2[,2]] = samples2[samples2[samples2[,4]%in% samples2[,2],4],3]
+
+samples2$paternal_grandmother="0"
+samples2$paternal_grandmother[samples2[,3] %in% samples2[,2]] = samples2[samples2[samples2[,3]%in% samples2[,2],3],4]
+samples2$paternal_grandfather="0"
+samples2$paternal_grandfather[samples2[,3] %in% samples2[,2]] = samples2[samples2[samples2[,3]%in% samples2[,2],3],3]
+
+samples2$n_genotyped_maternal_grandparents =rowSums(samples2[,c("maternal_grandmother","maternal_grandfather")]!="0")
+samples2$n_genotyped_paternal_grandparents =rowSums(samples2[,c("paternal_grandmother","paternal_grandfather")]!="0")
+samples2$n_genotyped_grandparents =samples2$n_genotyped_maternal_grandparents+samples2$n_genotyped_paternal_grandparents
+samples2$n_genotyped_children = sapply(samples2[,2],function(x){sum(samples[,3] == x | samples[,4] == x)})
+
+samples2$possible_halfsib=((samples2$total_same_parents!=samples2$total_same_mother&samples2[,4]!="0")|(samples2$total_same_parents!=samples2$total_same_father & samples2[,3]!="0"))
+maternal=samples2[samples2[,4] != "0",c(1,2,4,3,6:ncol(samples2))]
+paternal=samples2[samples2[,3] != "0",c(1,2,3,4,6:ncol(samples2))]
+
+rownames(maternal)=maternal[,2]
+rownames(paternal)=paternal[,2]
+colnames(maternal)[1:4]=c("family","child","mother","father")
+colnames(paternal)[1:4]=c("family","child","father","mother")
+
+
+if(informative.only==TRUE){
+maternal=maternal[maternal$total_same_father>2 & maternal$total_same_mother>2 & maternal$total_same_father==maternal$total_same_mother,]
+paternal=paternal[paternal$total_same_father>2 & paternal$total_same_mother>2 & paternal$total_same_father==paternal$total_same_mother,]
+}
+
+duoHMM.all=NULL
+for(i in 1:22){
+duoHMM=read.delim(gsub(".1.",paste0(".",i,"."),duoHMM.file,fixed=T),header=T,stringsAsFactors=F)
+duoHMM=duoHMM[duoHMM$PROB_RECOMBINATION>p.cutoff,]
+duoHMM$chr=i
+duoHMM.all=rbind(duoHMM.all,duoHMM)
+}
+
+children=unique(NFTOOLS.data$child)
+children=children[children%in% duoHMM.all$CHILD]
+
+all.NFTOOLS.overlaps=NULL
+all.duoHMM.overlaps=NULL
+all.NFTOOLS.unique=NULL
+all.duoHMM.unique=NULL
+for(child in children){
+print(child)
+duoHMM.child=duoHMM.all[duoHMM.all$CHILD==child,]
+NFTOOLS.child=NFTOOLS.data[NFTOOLS.data$child==child,]
+
+parents=c("male","female")
+for(p in 1:2){
+if(p==2){
+duoHMM.child.parent=duoHMM.child[duoHMM.child$PARENT %in% maternal$mother,]
+if(nrow(duoHMM.child.parent)>0){
+duoHMM.child.parent$sex="female"
+}
+NFTOOLS.child.parent=NFTOOLS.child[NFTOOLS.child$sex=="female",]
+} else {
+duoHMM.child.parent=duoHMM.child[duoHMM.child$PARENT %in% paternal$father,]
+if(nrow(duoHMM.child.parent)>0){
+duoHMM.child.parent$sex="male"
+}
+NFTOOLS.child.parent=NFTOOLS.child[NFTOOLS.child$sex=="male",]
+}
+if(nrow(duoHMM.child.parent)>0 && nrow(NFTOOLS.child.parent)>0){
+NFTOOLS.overlaps=do.call(rbind,
+apply(duoHMM.child.parent[,c("chr","START","END")],1,function(xover){
+chr=xover[1]
+start=xover[2]
+end=xover[3]
+####also return duoHMM crossover so you can directly compare coordinates
+#### need to compare hotspot overlap too
+overlapping=NFTOOLS.child.parent[NFTOOLS.child.parent$chr==chr & ((NFTOOLS.child.parent$left <= start & NFTOOLS.child.parent$right > start & NFTOOLS.child.parent$right <=end) |
+(NFTOOLS.child.parent$left >= start & NFTOOLS.child.parent$left <end & NFTOOLS.child.parent$right >=end)|(NFTOOLS.child.parent$left > start & NFTOOLS.child.parent$right <=end)|(NFTOOLS.child.parent$left < start & NFTOOLS.child.parent$right >end)),]
+tmp=NULL
+if(nrow(overlapping)>0){
+for(i in 1:nrow(overlapping)){
+tmp=rbind(tmp,xover[2:3])
+}
+overlapping=cbind(overlapping,tmp)
+}
+return(overlapping)
+}))
+
+NFTOOLS.overlaps$xover_ID=paste(NFTOOLS.overlaps$chr,NFTOOLS.overlaps$left,NFTOOLS.overlaps$right,sep="_")
+NFTOOLS.overlaps$n_overlaps=unlist(sapply(as.character(NFTOOLS.overlaps$xover_ID),function(x){return(sum(as.character(NFTOOLS.overlaps$xover_ID) == x))}))
+NFTOOLS.overlaps=unique(NFTOOLS.overlaps)
+rownames(NFTOOLS.child.parent)=paste(NFTOOLS.child.parent$chr,NFTOOLS.child.parent$left,NFTOOLS.child.parent$right,sep="_")
+
+NFTOOLS.unique=NFTOOLS.child.parent[!rownames(NFTOOLS.child.parent) %in% NFTOOLS.overlaps$xover_ID,]
+
+duoHMM.overlaps=do.call(rbind,
+apply(NFTOOLS.child.parent[,c("chr","left","right")],1,function(xover){
+chr=xover[1]
+start=xover[2]
+end=xover[3]
+overlapping=duoHMM.child.parent[(duoHMM.child.parent$chr==chr & ((duoHMM.child.parent$START <= start & duoHMM.child.parent$END > start & duoHMM.child.parent$END <= end)|
+(duoHMM.child.parent$START >= start & duoHMM.child.parent$START < end & duoHMM.child.parent$END >= end)|(duoHMM.child.parent$START >start & duoHMM.child.parent$END <=end)|(duoHMM.child.parent$START <start & duoHMM.child.parent$END >end)))>0,]
+
+tmp=NULL
+if(nrow(overlapping)>0){
+for(i in 1:nrow(overlapping)){
+tmp=rbind(tmp,xover)
+}
+overlapping=cbind(overlapping,tmp)
+}
+
+return(overlapping)
+}))
+duoHMM.overlaps$xover_ID=paste(duoHMM.overlaps$chr,duoHMM.overlaps$START,duoHMM.overlaps$END,sep="_")
+duoHMM.overlaps$n_overlaps=unlist(sapply(as.character(duoHMM.overlaps$xover_ID),function(x){return(sum(as.character(duoHMM.overlaps$xover_ID) == x))}))
+duoHMM.overlaps=unique(duoHMM.overlaps)
+
+rownames(duoHMM.child.parent)=paste(duoHMM.child.parent$chr,duoHMM.child.parent$START,duoHMM.child.parent$END,sep="_")
+duoHMM.unique=duoHMM.child.parent[!rownames(duoHMM.child.parent) %in% duoHMM.overlaps$xover_ID,]
+
+all.NFTOOLS.overlaps=rbind(all.NFTOOLS.overlaps,NFTOOLS.overlaps)
+all.duoHMM.overlaps=rbind(all.duoHMM.overlaps,duoHMM.overlaps)
+all.NFTOOLS.unique=rbind(all.NFTOOLS.unique,NFTOOLS.unique)
+all.duoHMM.unique=rbind(all.duoHMM.unique,duoHMM.unique)
+}
+}
+}
+
+
+write.table(all.NFTOOLS.overlaps,paste0(thisdir,"/NFTOOLS_calls_overlapping_duoHMM.",prefix,".txt"),quote=F,sep="\t",row.names=F)
+write.table(all.duoHMM.overlaps,paste0(thisdir,"/duoHMM_calls_overlapping_NFTOOLS.",prefix,".txt"),quote=F,sep="\t",row.names=F)
+write.table(all.NFTOOLS.unique,paste0(thisdir,"/NFTOOLS_calls_NOT_overlapping_duoHMM.",prefix,".txt"),quote=F,sep="\t",row.names=F)
+write.table(all.duoHMM.unique,paste0(thisdir,"/duoHMM_calls_NOT_overlapping_NFTOOLS.",prefix,".txt"),quote=F,sep="\t",row.names=F)
+}
+
+#compare.NFTOOLS.to.duoHMM.overlap("/well/donnelly/hilary/TwinRecombination/NFTOOLS/DATA/all_autosomes.Brisbane_data.610K.filtered.max_1pc_missing.inrecomb_k5.listchr.txt.events","/well/donnelly/hilary/maternal_age_and_recombination/QTR/duoHMM_results/QTR_minus_MZs.610K.1.post_MERLIN.max_0.05_missing.generr_removed.recombinations.txt","/well/donnelly/hilary/maternal_age_and_recombination/QTR/SHAPEIT_results/QTR_minus_MZs.610K.1.post_MERLIN.max_0.05_missing.generr_removed.SHAPEIT_phased.sample","QTR_610K","/well/donnelly/hilary/maternal_age_and_recombination/QTR/duoHMM_results/",0,FALSE)
+#compare.NFTOOLS.to.duoHMM.overlap("/well/donnelly/hilary/TwinRecombination/NFTOOLS/DATA/all_autosomes.Brisbane_data.370K.filtered.max_1pc_missing.inrecomb_k5.listchr.txt.events","/well/donnelly/hilary/maternal_age_and_recombination/QTR/duoHMM_results/QTR_minus_MZs.370K.1.post_MERLIN.max_0.05_missing.generr_removed.recombinations.txt","/well/donnelly/hilary/maternal_age_and_recombination/QTR/SHAPEIT_results/QTR_minus_MZs.370K.1.post_MERLIN.max_0.05_missing.generr_removed.SHAPEIT_phased.sample","QTR_370K","/well/donnelly/hilary/maternal_age_and_recombination/QTR/duoHMM_results/",0,FALSE)
+#compare.NFTOOLS.to.duoHMM.overlap("/well/donnelly/hilary/TwinRecombination/NFTOOLS/DATA/all_autosomes.Amsterdam_all_families.max_0.2pc_missing.inrecomb_k5.txt.events","/well/donnelly/hilary/maternal_age_and_recombination/NTR/duoHMM_results/NTR_minus_MZs.1.post_MERLIN.max_0.05_missing.generr_removed.recombinations.txt","/well/donnelly/hilary/maternal_age_and_recombination/NTR/SHAPEIT_results/NTR_minus_MZs.1.post_MERLIN.max_0.05_missing.generr_removed.SHAPEIT_phased.sample","NTR","/well/donnelly/hilary/maternal_age_and_recombination/NTR/duoHMM_results/",0,FALSE)
+#compare.NFTOOLS.to.duoHMM.overlap("/well/donnelly/hilary/TwinRecombination/NFTOOLS/DATA/French_Canadians/all_FC_crossovers.k5.txt","/well/donnelly/hilary/maternal_age_and_recombination/FC/duoHMM_results/FC.1.post_MERLIN.generr_removed.recombinations.txt","/well/donnelly/hilary/maternal_age_and_recombination/FC/SHAPEIT_results/FC.1.post_MERLIN.SHAPEIT_phased.sample","FC","/well/donnelly/hilary/maternal_age_and_recombination/FC/duoHMM_results/",0,FALSE)
+#compare.NFTOOLS.to.duoHMM.overlap("/well/donnelly/hilary/TwinRecombination/NFTOOLS/DATA/all_autosomes.Brisbane_data.610K.filtered.max_1pc_missing.inrecomb_k5.listchr.txt.events","/well/donnelly/hilary/maternal_age_and_recombination/QTR/duoHMM_results/QTR_minus_MZs.610K.1.post_MERLIN.max_0.05_missing.generr_removed.recombinations.txt","/well/donnelly/hilary/maternal_age_and_recombination/QTR/SHAPEIT_results/QTR_minus_MZs.610K.1.post_MERLIN.max_0.05_missing.generr_removed.SHAPEIT_phased.sample","QTR_610K_p_0.5","/well/donnelly/hilary/maternal_age_and_recombination/QTR/duoHMM_results/",0.5,FALSE)
+#compare.NFTOOLS.to.duoHMM.overlap("/well/donnelly/hilary/TwinRecombination/NFTOOLS/DATA/all_autosomes.Brisbane_data.370K.filtered.max_1pc_missing.inrecomb_k5.listchr.txt.events","/well/donnelly/hilary/maternal_age_and_recombination/QTR/duoHMM_results/QTR_minus_MZs.370K.1.post_MERLIN.max_0.05_missing.generr_removed.recombinations.txt","/well/donnelly/hilary/maternal_age_and_recombination/QTR/SHAPEIT_results/QTR_minus_MZs.370K.1.post_MERLIN.max_0.05_missing.generr_removed.SHAPEIT_phased.sample","QTR_370K_p_0.5","/well/donnelly/hilary/maternal_age_and_recombination/QTR/duoHMM_results/",0.5,FALSE)
+#compare.NFTOOLS.to.duoHMM.overlap("/well/donnelly/hilary/TwinRecombination/NFTOOLS/DATA/all_autosomes.Amsterdam_all_families.max_0.2pc_missing.inrecomb_k5.txt.events","/well/donnelly/hilary/maternal_age_and_recombination/NTR/duoHMM_results/NTR_minus_MZs.1.post_MERLIN.max_0.05_missing.generr_removed.recombinations.txt","/well/donnelly/hilary/maternal_age_and_recombination/NTR/SHAPEIT_results/NTR_minus_MZs.1.post_MERLIN.max_0.05_missing.generr_removed.SHAPEIT_phased.sample","NTR_p_0.5","/well/donnelly/hilary/maternal_age_and_recombination/NTR/duoHMM_results/",0.5,FALSE)
+#compare.NFTOOLS.to.duoHMM.overlap("/well/donnelly/hilary/TwinRecombination/NFTOOLS/DATA/French_Canadians/all_FC_crossovers.k5.txt","/well/donnelly/hilary/maternal_age_and_recombination/FC/duoHMM_results/FC.1.post_MERLIN.generr_removed.recombinations.txt","/well/donnelly/hilary/maternal_age_and_recombination/FC/SHAPEIT_results/FC.1.post_MERLIN.SHAPEIT_phased.sample","FC_p_0.5","/well/donnelly/hilary/maternal_age_and_recombination/FC/duoHMM_results/",0.5,FALSE)
+
+#compare.NFTOOLS.to.duoHMM.overlap("/well/donnelly/hilary/TwinRecombination/NFTOOLS/DATA/all_autosomes.Brisbane_data.610K.filtered.max_1pc_missing.inrecomb_k5.listchr.txt.events","/well/donnelly/hilary/maternal_age_and_recombination/QTR/duoHMM_results/QTR_minus_MZs.610K.1.post_MERLIN.max_0.05_missing.generr_removed.recombinations.txt","/well/donnelly/hilary/maternal_age_and_recombination/QTR/SHAPEIT_results/QTR_minus_MZs.610K.1.post_MERLIN.max_0.05_missing.generr_removed.SHAPEIT_phased.sample","QTR_610K.informative_only","/well/donnelly/hilary/maternal_age_and_recombination/QTR/duoHMM_results/",0,TRUE)
+#compare.NFTOOLS.to.duoHMM.overlap("/well/donnelly/hilary/TwinRecombination/NFTOOLS/DATA/all_autosomes.Brisbane_data.370K.filtered.max_1pc_missing.inrecomb_k5.listchr.txt.events","/well/donnelly/hilary/maternal_age_and_recombination/QTR/duoHMM_results/QTR_minus_MZs.370K.1.post_MERLIN.max_0.05_missing.generr_removed.recombinations.txt","/well/donnelly/hilary/maternal_age_and_recombination/QTR/SHAPEIT_results/QTR_minus_MZs.370K.1.post_MERLIN.max_0.05_missing.generr_removed.SHAPEIT_phased.sample","QTR_370K.informative_only","/well/donnelly/hilary/maternal_age_and_recombination/QTR/duoHMM_results/",0,TRUE)
+#compare.NFTOOLS.to.duoHMM.overlap("/well/donnelly/hilary/TwinRecombination/NFTOOLS/DATA/all_autosomes.Amsterdam_all_families.max_0.2pc_missing.inrecomb_k5.txt.events","/well/donnelly/hilary/maternal_age_and_recombination/NTR/duoHMM_results/NTR_minus_MZs.1.post_MERLIN.max_0.05_missing.generr_removed.recombinations.txt","/well/donnelly/hilary/maternal_age_and_recombination/NTR/SHAPEIT_results/NTR_minus_MZs.1.post_MERLIN.max_0.05_missing.generr_removed.SHAPEIT_phased.sample","NTR.informative_only","/well/donnelly/hilary/maternal_age_and_recombination/NTR/duoHMM_results/",0,TRUE)
+#compare.NFTOOLS.to.duoHMM.overlap("/well/donnelly/hilary/TwinRecombination/NFTOOLS/DATA/French_Canadians/all_FC_crossovers.k5.txt","/well/donnelly/hilary/maternal_age_and_recombination/FC/duoHMM_results/FC.1.post_MERLIN.generr_removed.recombinations.txt","/well/donnelly/hilary/maternal_age_and_recombination/FC/SHAPEIT_results/FC.1.post_MERLIN.SHAPEIT_phased.sample","FC.informative_only","/well/donnelly/hilary/maternal_age_and_recombination/FC/duoHMM_results/",0,TRUE)
+#compare.NFTOOLS.to.duoHMM.overlap("/well/donnelly/hilary/TwinRecombination/NFTOOLS/DATA/all_autosomes.Brisbane_data.610K.filtered.max_1pc_missing.inrecomb_k5.listchr.txt.events","/well/donnelly/hilary/maternal_age_and_recombination/QTR/duoHMM_results/QTR_minus_MZs.610K.1.post_MERLIN.max_0.05_missing.generr_removed.recombinations.txt","/well/donnelly/hilary/maternal_age_and_recombination/QTR/SHAPEIT_results/QTR_minus_MZs.610K.1.post_MERLIN.max_0.05_missing.generr_removed.SHAPEIT_phased.sample","QTR_610K_p_0.5.informative_only","/well/donnelly/hilary/maternal_age_and_recombination/QTR/duoHMM_results/",0.5,TRUE)
+#compare.NFTOOLS.to.duoHMM.overlap("/well/donnelly/hilary/TwinRecombination/NFTOOLS/DATA/all_autosomes.Brisbane_data.370K.filtered.max_1pc_missing.inrecomb_k5.listchr.txt.events","/well/donnelly/hilary/maternal_age_and_recombination/QTR/duoHMM_results/QTR_minus_MZs.370K.1.post_MERLIN.max_0.05_missing.generr_removed.recombinations.txt","/well/donnelly/hilary/maternal_age_and_recombination/QTR/SHAPEIT_results/QTR_minus_MZs.370K.1.post_MERLIN.max_0.05_missing.generr_removed.SHAPEIT_phased.sample","QTR_370K_p_0.5.informative_only","/well/donnelly/hilary/maternal_age_and_recombination/QTR/duoHMM_results/",0.5,TRUE)
+#compare.NFTOOLS.to.duoHMM.overlap("/well/donnelly/hilary/TwinRecombination/NFTOOLS/DATA/all_autosomes.Amsterdam_all_families.max_0.2pc_missing.inrecomb_k5.txt.events","/well/donnelly/hilary/maternal_age_and_recombination/NTR/duoHMM_results/NTR_minus_MZs.1.post_MERLIN.max_0.05_missing.generr_removed.recombinations.txt","/well/donnelly/hilary/maternal_age_and_recombination/NTR/SHAPEIT_results/NTR_minus_MZs.1.post_MERLIN.max_0.05_missing.generr_removed.SHAPEIT_phased.sample","NTR_p_0.5.informative_only","/well/donnelly/hilary/maternal_age_and_recombination/NTR/duoHMM_results/",0.5,TRUE)
+#compare.NFTOOLS.to.duoHMM.overlap("/well/donnelly/hilary/TwinRecombination/NFTOOLS/DATA/French_Canadians/all_FC_crossovers.k5.txt","/well/donnelly/hilary/maternal_age_and_recombination/FC/duoHMM_results/FC.1.post_MERLIN.generr_removed.recombinations.txt","/well/donnelly/hilary/maternal_age_and_recombination/FC/SHAPEIT_results/FC.1.post_MERLIN.SHAPEIT_phased.sample","FC_p_0.5.informative_only","/well/donnelly/hilary/maternal_age_and_recombination/FC/duoHMM_results/",0.5,TRUE)
+}
+
+
+library(scales)
+compare.pvals.and.sizes=function(NFTOOLS.unique.file,duoHMM.unique.file,NFTOOLS.overlapping.file,duoHMM.overlapping.file,prefix){
+NFTOOLS.unique=read.delim(NFTOOLS.unique.file,header=T,stringsAsFactors=F)
+duoHMM.unique=read.delim(duoHMM.unique.file,header=T,stringsAsFactors=F)
+NFTOOLS.overlapping=read.delim(NFTOOLS.overlapping.file,header=T,stringsAsFactors=F)
+duoHMM.overlapping=read.delim(duoHMM.overlapping.file,header=T,stringsAsFactors=F)
+
+#compare duoHMM p-values
+if(FALSE){
+pdf(paste0(mydir,"/recombination_of_prob_recomb.duoHMM_calls_unique_or_overlapping_NFTOOLS.",prefix,".pdf"),height=5,width=5)
+if(prefix != "FC"){
+hist(duoHMM.overlapping$PROB_RECOMBINATION,main=prefix,xlab="Probability of recombination",xlim=c(0,1),col="blue")
+hist(duoHMM.unique$PROB_RECOMBINATION,add=T,col=alpha("red",0.8))
+} else {
+hist(duoHMM.unique$PROB_RECOMBINATION,main=prefix,xlab="Probability of recombination",xlim=c(0,1),col=alpha("red",0.8))
+hist(duoHMM.overlapping$PROB_RECOMBINATION,add=T,col="blue")
+}
+legend("topleft",c("unique to duoHMM","called by duoHMM and NFTOOLS"),fill=c(alpha("red",0.8),"blue"))
+dev.off()
+
+#compare crossover sizes for overlapping crossovers
+pdf(paste0(mydir,"/distribution_of_sizes_for_overlapping_crossovers.",prefix,".pdf"),height=5,width=5)
+plot(density(log10(NFTOOLS.overlapping$right-NFTOOLS.overlapping$left)),xlab="log10(resolution)",main=prefix,lwd=2,ylim=c(0,1))
+lines(density(log10(duoHMM.overlapping$END-duoHMM.overlapping$START)),col="red",lwd=2)
+lines(density(log10(duoHMM.unique$END-duoHMM.unique$START)),col="red",lwd=2,lty=3)
+lines(density(log10(NFTOOLS.unique$right-NFTOOLS.unique$left)),col="black",lwd=2,lty=3)
+legend("topright",c("NFTOOLS overlapping duoHMM","duoHMM overlapping NFTOOLS","NFTOOLS only","duoHMM only"),col=c("black","red","black","red"),lty=c(1,1,3,3),lwd=2)
+dev.off()
+
+
+NFTOOLS.list=list(unique(rbind(NFTOOLS.unique[,1:8],NFTOOLS.overlapping[,1:8])),unique(NFTOOLS.unique[,1:8]),unique(NFTOOLS.overlapping[,1:8]))
+duoHMM.list=list(unique(rbind(duoHMM.unique[,1:7],duoHMM.overlapping[,1:7])),unique(duoHMM.unique[,1:7]),unique(duoHMM.overlapping[,1:7]))
+resolution=NULL
+for(i in 1:3){
+NFTOOLS.all=NFTOOLS.list[[i]]
+duoHMM.all=duoHMM.list[[i]]
+
+NFTOOLS.resolution=c(nrow(NFTOOLS.all),median(NFTOOLS.all$right-NFTOOLS.all$left),mean(NFTOOLS.all$right-NFTOOLS.all$left),sum(NFTOOLS.all$right-NFTOOLS.all$left <10000),sum(NFTOOLS.all$right-NFTOOLS.all$left <20000),sum(NFTOOLS.all$right-NFTOOLS.all$left <30000),
+sum(NFTOOLS.all$right-NFTOOLS.all$left <40000),sum(NFTOOLS.all$right-NFTOOLS.all$left <50000),sum(NFTOOLS.all$right-NFTOOLS.all$left <100000))
+
+duoHMM.resolution=c(nrow(duoHMM.all),median(duoHMM.all$END-duoHMM.all$START),mean(duoHMM.all$END-duoHMM.all$START),sum(duoHMM.all$END-duoHMM.all$START<10000),sum(duoHMM.all$END-duoHMM.all$START<20000),sum(duoHMM.all$END-duoHMM.all$START<30000),
+sum(duoHMM.all$END-duoHMM.all$START<40000),sum(duoHMM.all$END-duoHMM.all$START<50000),sum(duoHMM.all$END-duoHMM.all$START<100000))
+
+resolution=rbind(resolution,NFTOOLS.resolution,duoHMM.resolution)
+}
+
+colnames(resolution)=c("total","median","mean","n_under_10kb","n_under_20kb","n_under_30kb","n_under_40kb","n_under_50kb","n_under_100kb")
+rownames(resolution)=paste(prefix,c("NFTOOLS.all","duoHMM.all","NFTOOLS.only","duoHMM.only","NFTOOLS.both","duoHMM.both"),sep=".")
+prop.resolution=resolution[,4:9]/resolution[,1]
+colnames(prop.resolution)=gsub("n_","prop_",colnames(prop.resolution))
+resolution=cbind(resolution,prop.resolution)
+return(resolution)
+}
+
+pdf(paste0(mydir,"/compare_sizes_for_overlapping_crossovers.",prefix,".pdf"),height=5,width=5)
+plot(log10(NFTOOLS.overlapping$right-NFTOOLS.overlapping$left),log10(NFTOOLS.overlapping$END-NFTOOLS.overlapping$START),xlab="log10(NFTOOLS resolution)",ylab="log10(duoHMM resolution)",main=prefix,col=alpha("black",0.45),bg=alpha("black",0.45),pch=21)
+abline(a=0,b=1,col="red")
+dev.off()
+
+}
+
+resolution.QTR370.all=compare.pvals.and.sizes("QTR/duoHMM_results/NFTOOLS_calls_NOT_overlapping_duoHMM.QTR_370K.txt","QTR/duoHMM_results/duoHMM_calls_NOT_overlapping_NFTOOLS.QTR_370K.txt","QTR/duoHMM_results/NFTOOLS_calls_overlapping_duoHMM.QTR_370K.txt",
+"QTR/duoHMM_results/duoHMM_calls_overlapping_NFTOOLS.QTR_370K.txt","QTR370K")
+
+resolution.QTR610.all=compare.pvals.and.sizes("QTR/duoHMM_results/NFTOOLS_calls_NOT_overlapping_duoHMM.QTR_610K.txt","QTR/duoHMM_results/duoHMM_calls_NOT_overlapping_NFTOOLS.QTR_610K.txt","QTR/duoHMM_results/NFTOOLS_calls_overlapping_duoHMM.QTR_610K.txt",
+"QTR/duoHMM_results/duoHMM_calls_overlapping_NFTOOLS.QTR_610K.txt","QTR610K")
+
+resolution.NTR.all=compare.pvals.and.sizes("NTR/duoHMM_results/NFTOOLS_calls_NOT_overlapping_duoHMM.NTR.txt","NTR/duoHMM_results/duoHMM_calls_NOT_overlapping_NFTOOLS.NTR.txt","NTR/duoHMM_results/NFTOOLS_calls_overlapping_duoHMM.NTR.txt",
+"NTR/duoHMM_results/duoHMM_calls_overlapping_NFTOOLS.NTR.txt","NTR")
+
+resolution.FC.all=compare.pvals.and.sizes("FC/duoHMM_results/NFTOOLS_calls_NOT_overlapping_duoHMM.FC.txt","FC/duoHMM_results/duoHMM_calls_NOT_overlapping_NFTOOLS.FC.txt","FC/duoHMM_results/NFTOOLS_calls_overlapping_duoHMM.FC.txt",
+"FC/duoHMM_results/duoHMM_calls_overlapping_NFTOOLS.FC.txt","FC")
+
+resolution.QTR370.inform=compare.pvals.and.sizes("QTR/duoHMM_results/NFTOOLS_calls_NOT_overlapping_duoHMM.QTR_370K.informative_only.txt","QTR/duoHMM_results/duoHMM_calls_NOT_overlapping_NFTOOLS.QTR_370K.informative_only.txt",
+"QTR/duoHMM_results/NFTOOLS_calls_overlapping_duoHMM.QTR_370K.informative_only.txt","QTR/duoHMM_results/duoHMM_calls_overlapping_NFTOOLS.QTR_370K.informative_only.txt","QTR370K.informative_only")
+
+resolution.QTR610.inform=compare.pvals.and.sizes("QTR/duoHMM_results/NFTOOLS_calls_NOT_overlapping_duoHMM.QTR_610K.informative_only.txt","QTR/duoHMM_results/duoHMM_calls_NOT_overlapping_NFTOOLS.QTR_610K.informative_only.txt",
+"QTR/duoHMM_results/NFTOOLS_calls_overlapping_duoHMM.QTR_610K.informative_only.txt","QTR/duoHMM_results/duoHMM_calls_overlapping_NFTOOLS.QTR_610K.informative_only.txt","QTR610K.informative_only")
+
+resolution.NTR.inform=compare.pvals.and.sizes("NTR/duoHMM_results/NFTOOLS_calls_NOT_overlapping_duoHMM.NTR.informative_only.txt","NTR/duoHMM_results/duoHMM_calls_NOT_overlapping_NFTOOLS.NTR.informative_only.txt",
+"NTR/duoHMM_results/NFTOOLS_calls_overlapping_duoHMM.NTR.informative_only.txt","NTR/duoHMM_results/duoHMM_calls_overlapping_NFTOOLS.NTR.informative_only.txt","NTR.informative_only")
+
+resolution.FC.inform=compare.pvals.and.sizes("FC/duoHMM_results/NFTOOLS_calls_NOT_overlapping_duoHMM.FC.informative_only.txt","FC/duoHMM_results/duoHMM_calls_NOT_overlapping_NFTOOLS.FC.informative_only.txt",
+"FC/duoHMM_results/NFTOOLS_calls_overlapping_duoHMM.FC.informative_only.txt","FC/duoHMM_results/duoHMM_calls_overlapping_NFTOOLS.FC.informative_only.txt","FC.informative_only")
+
+#resolution.all=rbind(resolution.QTR370.all,resolution.QTR610.all,resolution.NTR.all,resolution.FC.all)
+#resolution.inform=rbind(resolution.QTR370.inform,resolution.QTR610.inform,resolution.NTR.inform,resolution.FC.inform)
+
+#write.table(resolution.all,paste0(mydir,"/resolution_of_NFTOOLS_vs_duoHMM_crossovers.txt"),quote=F,sep="\t")
+#write.table(resolution.inform,paste0(mydir,"/resolution_of_NFTOOLS_vs_duoHMM_crossovers.informative_families_only.txt"),quote=F,sep="\t")
+
+
+#}

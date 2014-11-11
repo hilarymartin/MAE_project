@@ -1,0 +1,89 @@
+10
+
+dir
+108
+svn://svn.code.sf.net/p/madeline2/code/madeline2/branches/libcurl
+svn://svn.code.sf.net/p/madeline2/code
+
+
+
+2010-05-26T22:36:20.005597Z
+92
+inful
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+36be61f0-9d1b-0410-b0b4-cea5cbe2d1c6
+
+cmake
+dir
+
+src
+dir
+
+3rdParty
+dir
+
+bin
+dir
+
+documentation
+dir
+
+libs
+dir
+
+testdata
+dir
+
+doxygen
+dir
+
+CMakeLists.txt
+file
+
+
+
+
+2014-07-27T12:27:21.639080Z
+55f406a1d39d652d2e6196d6f1f0548a
+2010-05-26T22:36:20.005597Z
+92
+inful
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1168
+
+po
+dir
+
