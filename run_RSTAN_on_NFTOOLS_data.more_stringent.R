@@ -70,10 +70,10 @@ if(!print.only){
 }
 
 pdf(paste0("RSTAN_output_with_NFTOOLS_more_stringent/model1.6.mu_m_N_",mean_alpha_prior,"_",sigmasq_mu_m_prior,".sigmasq_m_IG_",sigmasq_m_alpha,"_",sigmasq_m_beta,".",myname,".posteriors.beta_Age.pdf"),height=5,width=5)
-if(myname=="maternal"){my.ylim=9}else {my.ylim=14}
+if(myname=="maternal"){my.ylim=6}else {my.ylim=14}
 for(i in 1:ncol(mysim$beta_Age)){
     if(i==1){
-        plot(density(mysim$beta_Age[,i]),xlim=range(mysim$beta_Age),xlab="beta_Age",main="Posterior for beta_Age",col=mycols[as.character(cohort.codes[i,2])],lwd=2,ylim=c(0,my.ylim))
+        plot(density(mysim$beta_Age[,i]),xlim=range(-0.5,0.5),xlab="beta_Age",main="Posterior for beta_Age",col=mycols[as.character(cohort.codes[i,2])],lwd=2,ylim=c(0,my.ylim))
     }else {
         lines(density(mysim$beta_Age[,i]),col=mycols[as.character(cohort.codes[i,2])],lwd=2)
     }
@@ -89,12 +89,15 @@ legend("topleft",c(as.character(cohort.codes[order(cohort.codes[,1]),2]),"global
        polygon(x=rep(c(0.19-0.092,0.19+0.092),2)[c(1,2,4,3)],y=c(0,0,my.ylim,my.ylim),col=alpha("pink",0.2),border=NA)
        abline(v=0.19,lty=4,lwd=2)
        abline(v=-0.42,lty=4,lwd=2,col="grey")
-       legend("topright",c("Adam","decode","Hutterites","Julie"),lty=c(2,3,4,4),lwd=2,col=c("black","black","black","grey"),cex=0.5)
+              abline(v=-0.29,lty=4,lwd=3,col="darkgreen")
+              legend("topright",c("Campbell","Kong","Coop","Hussin","Bleazard"),lty=c(2,3,4,4,4),lwd=2,col=c("black","black","black","grey","darkgreen"),cex=0.5)
+
+
    }
     dev.off()
 
 pdf(paste0("RSTAN_output_with_NFTOOLS_more_stringent/model1.6.mu_m_N_",mean_alpha_prior,"_",sigmasq_mu_m_prior,".sigmasq_m_IG_",sigmasq_m_alpha,"_",sigmasq_m_beta,".",myname,".posteriors.mu_m.pdf"),height=5,width=5)
-if(myname=="maternal"){my.ylim=0.3}else {my.ylim=0.5}
+if(myname=="maternal"){my.ylim=0.2}else {my.ylim=0.5}
 for(i in 1:ncol(mysim$mu_m)){
     if(i==1){
         plot(density(mysim$mu_m[,i]),xlim=range(mysim$mu_m),xlab="mu_m",main="Posterior for mu_m",col=mycols[as.character(cohort.codes[i,2])],lwd=2,ylim=c(0,my.ylim))
@@ -108,7 +111,7 @@ dev.off()
 
     pdf(paste0("RSTAN_output_with_NFTOOLS_more_stringent/model1.6.mu_m_N_",mean_alpha_prior,"_",sigmasq_mu_m_prior,".sigmasq_m_IG_",sigmasq_m_alpha,"_",sigmasq_m_beta,".",myname,".posteriors.sigmasq_m.pdf"),height=5,width=5)
     if(myname=="maternal"){
-        my.ylim=0.2
+        my.ylim=0.15
         my.xlim=100
     }else {
         my.ylim=0.6
@@ -138,11 +141,12 @@ pdf(paste0("RSTAN_output_with_NFTOOLS_more_stringent/model1.6.mu_m_N_",mean_alph
     lines(density(rigamma(10000,3,0.5)),lwd=2,lty=2)
 legend("topright",c("posterior","prior"),lty=c(1,2),lwd=c(2,2))
 dev.off()
+
 pdf(paste0("RSTAN_output_with_NFTOOLS_more_stringent/model1.6.sigmasq_m_IG_",sigmasq_m_alpha,"_",sigmasq_m_beta,".",myname,".posteriors.tausq.pdf"),height=5,width=5)
-    plot(density(mysim$tausq),xlab="tausq",main="Posterior for tausq",lwd=2)
-    lines(density(rigamma(10000,2,70)),lwd=2,lty=2)
-    legend("topright",c("posterior","prior"),lwd=2,lty=c(1,2))
-    dev.off()
+plot(density(mysim$tausq),xlab="tausq",main="Posterior for tausq",lwd=2)
+lines(density(rigamma(10000,2,70)),lwd=2,lty=2)
+legend("topright",c("posterior","prior"),lwd=2,lty=c(1,2))
+dev.off()
 
 }
 
@@ -385,13 +389,14 @@ pdf(paste0("RSTAN_output_with_NFTOOLS_more_stringent/model1.6.2.",myname,".poste
        polygon(x=rep(c(0.19-0.092,0.19+0.092),2)[c(1,2,4,3)],y=c(0,0,my.ylim,my.ylim),col=alpha("pink",0.2),border=NA)
        abline(v=0.19,lty=4,lwd=2)
        abline(v=-0.42,lty=4,lwd=2,col="grey")
-#       legend("topright",c("Adam","decode","Hutterites","Julie"),lty=c(2,3,4,4),lwd=2,col=c("black","black","black","grey"),cex=0.5)
-       legend("topright",c("Campbell","Kong","Coop","Hussin"),lty=c(2,3,4,4),lwd=2,col=c("black","black","black","grey"),cex=0.5)
+       abline(v=-0.29,lty=4,lwd=3,col="darkgreen")
+       legend("topright",c("Campbell","Kong","Coop","Hussin","Bleazard"),lty=c(2,3,4,4,4),lwd=2,col=c("black","black","black","grey","darkgreen"),cex=0.5)
+        
    }
     dev.off()
     
     pdf(paste0("RSTAN_output_with_NFTOOLS_more_stringent/model1.6.2.",myname,".posteriors.mu_m.mu_m_N_",mean_alpha_prior,"_",sigmasq_mu_m_prior,".sigmasq_m_IG_",sigmasq_m_alpha,"_",sigmasq_m_beta,".pdf"),height=5,width=5)
-    if(myname=="maternal"){my.ylim=0.4}else {my.ylim=0.7}
+    if(myname=="maternal"){my.ylim=0.3}else {my.ylim=0.7}
     for(i in 1:ncol(mysim$mu_m)){
         if(i==1){
             plot(density(mysim$mu_m[,i]),xlim=range(mysim$mu_m),xlab="mu_m",main="Posterior for mu_m",col=mycols[as.character(cohort.codes[i,2])],lwd=2,ylim=c(0,my.ylim))
@@ -407,7 +412,7 @@ pdf(paste0("RSTAN_output_with_NFTOOLS_more_stringent/model1.6.2.",myname,".poste
     
     pdf(paste0("RSTAN_output_with_NFTOOLS_more_stringent/model1.6.2.",myname,".posteriors.sigmasq_m.mu_m_N_",mean_alpha_prior,"_",sigmasq_mu_m_prior,".sigmasq_m_IG_",sigmasq_m_alpha,"_",sigmasq_m_beta,".pdf"),height=5,width=5)
     if(myname=="maternal"){
-        my.ylim=0.17
+        my.ylim=0.13
         my.xlim=100
     }else {
         my.ylim=0.7
@@ -1187,7 +1192,7 @@ if(argv[1] ==67 | argv[1]==68){
 
 pdf(paste0("RSTAN_output_with_NFTOOLS_more_stringent/model1.6.2.",myname,".posteriors.beta_Age.mu_m_N_",mean_alpha_prior,"_",sigmasq_mu_m_prior,".sigmasq_m_IG_",sigmasq_m_alpha,"_",sigmasq_m_beta,".pdf"),height=5,width=5)
     my.ylim=100
-        plot(density(mysim$beta_Age),xlim=c(-0.5,0.5),xlab="beta_Age",main="Posterior for beta_Age",lwd=2)
+    plot(density(mysim$beta_Age),xlim=c(-0.5,0.5),xlab="beta_Age",main="Posterior for beta_Age",lwd=2)
     abline(v=0,lwd=2)
     curve(dnorm(x,0,1),lty=2,lwd=2,add=T)
     legend("topleft",c("posterior","prior"),lty=c(1,2),lwd=2)
@@ -1199,8 +1204,8 @@ pdf(paste0("RSTAN_output_with_NFTOOLS_more_stringent/model1.6.2.",myname,".poste
        polygon(x=rep(c(0.19-0.092,0.19+0.092),2)[c(1,2,4,3)],y=c(0,0,my.ylim,my.ylim),col=alpha("pink",0.2),border=NA)
        abline(v=0.19,lty=4,lwd=2)
        abline(v=-0.42,lty=4,lwd=2,col="grey")
-#       legend("topright",c("Adam","decode","Hutterites","Julie"),lty=c(2,3,4,4),lwd=2,col=c("black","black","black","grey"),cex=0.5)
-       legend("topright",c("Campbell","Kong","Coop","Hussin"),lty=c(2,3,4,4),lwd=2,col=c("black","black","black","grey"),cex=0.5)
+       abline(v=-0.29,lty=4,lwd=3,col="darkgreen")
+       legend("topright",c("Campbell","Kong","Coop","Hussin","Bleazard"),lty=c(2,3,4,4,4),lwd=2,col=c("black","black","black","grey","darkgreen"),cex=0.5)
    }
     dev.off()
 
@@ -1405,9 +1410,9 @@ pdf(paste0("RSTAN_output_with_NFTOOLS_more_stringent/",myname,".posteriors.beta_
        polygon(x=rep(c(0.19-0.092,0.19+0.092),2)[c(1,2,4,3)],y=c(0,0,my.ylim,my.ylim),col=alpha("pink",0.2),border=NA)
        abline(v=0.19,lty=4,lwd=2)
        abline(v=-0.42,lty=4,lwd=2,col="grey")
-#       legend("topright",c("Adam","decode","Hutterites","Julie"),lty=c(2,3,4,4),lwd=2,col=c("black","black","black","grey"),cex=0.5)
-       legend("topright",c("Campbell","Kong","Coop","Hussin"),lty=c(2,3,4,4),lwd=2,col=c("black","black","black","grey"),cex=0.5)
-   }
+       abline(v=-0.29,lty=4,lwd=3,col="darkgreen")
+          legend("topright",c("Campbell","Kong","Coop","Hussin","Bleazard"),lty=c(2,3,4,4,4),lwd=2,col=c("black","black","black","grey","darkgreen"),cex=0.5)
+    }
     dev.off()
     
     pdf(paste0("RSTAN_output_with_NFTOOLS_more_stringent/",myname,".posteriors.mu_m.mu_m_N_",mean_alpha_prior,"_",sigmasq_mu_m_prior,".sigmasq_m_IG_",sigmasq_m_alpha,"_",sigmasq_m_beta,".pdf"),height=5,width=5)
