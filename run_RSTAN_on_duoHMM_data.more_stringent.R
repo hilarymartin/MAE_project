@@ -115,8 +115,6 @@ lines(rigamma(10000,3,0.1),lty=2,lwd=2)
 
 ####model 3.2
 
-
-
 if(argv[1] %in% c(27,28)){
 
 if(argv[1] ==27){
@@ -168,47 +166,62 @@ if(!print.only){
     names(mylwd)=c("infor.2gen.2parents","infor.3gen.2parents","noninfor.2kids.2gen.2parents","infor.2gen.1parent","infor.3gen.1parent","noninfor.2kids.2gen.1parent")
         mypch=c(NA,NA,NA,19,19,19)
     names(mypch)=c("infor.2gen.2parents","infor.3gen.2parents","noninfor.2kids.2gen.2parents","infor.2gen.1parent","infor.3gen.1parent","noninfor.2kids.2gen.1parent")
-
-    pdf(paste0("RSTAN_output_on_duoHMM_more_stringent/model3.2.",parent,".posteriors.beta_Age.pdf"),height=5,width=5)
+ pdf(paste0("RSTAN_output_on_duoHMM_more_stringent/model3.2.",parent,".posteriors.all_parameters.pdf"),height=8*3,width=4*3)
+par(mfrow=c(8,4))
+#    pdf(paste0("RSTAN_output_on_duoHMM_more_stringent/model3.2.",parent,".posteriors.beta_Age.pdf"),height=2.5,width=2.5)
     plot(density(mysim$beta_Age),xlab="beta_Age",main="Posterior for beta_Age")
     curve(dnorm(x,0,sqrt(0.05)),lwd=2,lty=2,add=T)
-    legend("topright",c("posterior","prior"),lty=2,lwd=2)
+    legend("topright",c("posterior","prior"),lty=c(1,2),lwd=2)
     abline(v=0,lwd=2)
-    dev.off()
+#    dev.off()
 
-    pdf(paste0("RSTAN_output_on_duoHMM_more_stringent/model3.2.",parent,".posteriors.p.pdf"),height=5,width=5)
-    for(i in 1:ncol(mysim$p_by_cohort)){
-        mylabels=c(paste(c("informative, 2 generations","informative, 3 generations","uninformative, 2 kids"),"both parents",sep=", "),paste(c("informative, 2 generations","informative, 3 generations","uninformative, 2 kids"),"1 parent",sep=", "))
-        names(mylabels)=c("infor.2gen.2parents","infor.3gen.2parents","noninfor.2kids.2gen.2parents","infor.2gen.1parent","infor.3gen.1parent","noninfor.2kids.2gen.1parent")
+
+#pdf(paste0("RSTAN_output_on_duoHMM_more_stringent/model3.2.",parent,".posteriors.sigmasq_m.pdf"),height=2.5,width=2.5)
+plot(density(mysim$sigmasq_m),xlab="sigmasq_m",main="Posterior for sigmasq_m",lwd=2)
+lines(density(rigamma(10000,5,5)),lty=2,lwd=2)
+legend("topright",c("posterior","prior"),lwd=2,lty=c(1,2))
+#dev.off()
+    
+ #   pdf(paste0("RSTAN_output_on_duoHMM_more_stringent/model3.2.",parent,".posteriors.omega.pdf"),height=2.5,width=2.5)
+    plot(density(mysim$omega),main="Posterior for omega",lwd=2,xlab="omega")
+    lines(1/seq(from=0,to=1,by=0.01),seq(from=0,to=1,by=0.01),type="l",lty=2,lwd=2)
+    legend("topright",c("posterior","prior"),lwd=2,lty=c(1,2))
+ #   dev.off()
+    
+  #  pdf(paste0("RSTAN_output_on_duoHMM_more_stringent/model3.2.",parent,".posteriors.mu_m.pdf"),height=2.5,width=2.5)
+    plot(density(mysim$mu_m),main="Posterior for mu_m",lwd=2,xlab="mu_m")
+    curve(dnorm(x,36,sqrt(6 )),lwd=2,lty=2,add=T)
+    legend("topright",c("posterior","prior"),lwd=2,lty=c(1,2))
+  #  dev.off()
+
+
+#    pdf(paste0("RSTAN_output_on_duoHMM_more_stringent/model3.2.",parent,".posteriors.p.pdf"),height=5,width=5)
+#    pdf(paste0("RSTAN_output_on_duoHMM_more_stringent/model3.2.",parent,".posteriors.p.all_cohorts_combined.pdf"),height=4*2.5,width=7*2.5)
+#par(mfrow=c(4,7))
+mylabels=c(paste(c("informative, 2 generations","informative, 3 generations","uninformative, 2 kids"),"both parents",sep=", "),paste(c("informative, 2 generations","informative, 3 generations","uninformative, 2 kids"),"1 parent",sep=", "))
+names(mylabels)=c("infor.2gen.2parents","infor.3gen.2parents","noninfor.2kids.2gen.2parents","infor.2gen.1parent","infor.3gen.1parent","noninfor.2kids.2gen.1parent")
+
+for(i in 1:ncol(mysim$p_by_cohort)){
         sample.size= sum(data2.mat$cohort.family.type==cohort.codes[cohort.codes[,1]==i,"Cohort"])
-        plot(density(mysim$p_by_cohort[,i]),xlab="p",col=mycols[as.character(cohort.codes[cohort.codes[,1]==i,"Pop"])],xlim=c(0,1),
-             lwd=mylwd[as.character(cohort.codes[cohort.codes[,1]==i,"Fam.type"])],lty=mylty[as.character(cohort.codes[cohort.codes[,1]==i,"Fam.type"])],main=paste0(cohort.codes[cohort.codes[,1]==i,"Pop"],", ",mylabels[cohort.codes[cohort.codes[,1]==i,"Fam.type"]]))
+if(FALSE){
+        plot(density(mysim$p_by_cohort[,i]),xlab="p",col=mycols[as.character(cohort.codes[cohort.codes[,1]==i,"Pop"])],xlim=c(0,1),lwd=mylwd[as.character(cohort.codes[cohort.codes[,1]==i,"Fam.type"])],lty=mylty[as.character(cohort.codes[cohort.codes[,1]==i,
+  "Fam.type"])],main=paste0(cohort.codes[cohort.codes[,1]==i,"Pop"],", ",mylabels[cohort.codes[cohort.codes[,1]==i,"Fam.type"]]))
         curve(dbeta(x,beta.parameters[beta.parameters$Cohort.type==i,"alpha"],beta.parameters[beta.parameters$Cohort.type==i,"beta"]),add=T)
         abline(v=median(mysim$p_by_cohort[,i]),col=mycols[as.character(cohort.codes[cohort.codes[,1]==i,"Pop"])],lwd=mylwd[as.character(cohort.codes[cohort.codes[,1]==i,"Fam.type"])],lty=mylty[as.character(cohort.codes[cohort.codes[,1]==i,"Fam.type"])])
         abline(v=beta.parameters[beta.parameters$Cohort.type==i,"mean.relative.to.all.informative"],col="black")
         legend("topleft",c("posterior","prior",paste0("n = ",sample.size)),col=c(mycols[as.character(cohort.codes[cohort.codes[,1]==i,"Pop"])],"black",NA),lty=c(mylty[as.character(cohort.codes[cohort.codes[,1]==i,"Fam.type"])],1,NA),
                lwd=c(mylwd[as.character(cohort.codes[cohort.codes[,1]==i,"Fam.type"])],1,NA))
     }
+
+        plot(density(mysim$p_by_cohort[,i]),xlab="p",xlim=c(0,1),main=paste0(cohort.codes[cohort.codes[,1]==i,"Pop"],", ",mylabels[cohort.codes[cohort.codes[,1]==i,"Fam.type"]]),lwd=2)
+        curve(dbeta(x,beta.parameters[beta.parameters$Cohort.type==i,"alpha"],beta.parameters[beta.parameters$Cohort.type==i,"beta"]),add=T,lty=2,lwd=2)
+#        abline(v=median(mysim$p_by_cohort[,i]),lwd=1)
+        abline(v=beta.parameters[beta.parameters$Cohort.type==i,"mean.relative.to.all.informative"],lwd=1,lty=2,col="blue")
+        legend("topleft",c("posterior","prior","p_observed",paste0("n = ",sample.size)),col=c("black","black","blue",NA),lty=c(1,2,2,NA),lwd=c(2,2,1,NA))
+    }
     dev.off()
 
 
-    pdf(paste0("RSTAN_output_on_duoHMM_more_stringent/model3.2.",parent,".posteriors.sigmasq_m.pdf"),height=5,width=5)
-plot(density(mysim$sigmasq_m),xlab="sigmasq_m",main="Posterior for sigmasq_m",lwd=2)
-lines(density(rigamma(10000,5,5)),lty=2,lwd=2)
-legend("topright",c("posterior","prior"),lwd=2,lty=c(1,2))
-dev.off()
-    
-    pdf(paste0("RSTAN_output_on_duoHMM_more_stringent/model3.2.",parent,".posteriors.omega.pdf"),height=5,width=5)
-    plot(density(mysim$omega),main="Posterior for omega",lwd=2,xlab="omega")
-    lines(1/seq(from=0,to=1,by=0.01),seq(from=0,to=1,by=0.01),type="l",lty=2)
-    legend("topright",c("posterior","prior"),lwd=2,lty=c(1,2))
-    dev.off()
-    
-    pdf(paste0("RSTAN_output_on_duoHMM_more_stringent/model3.2.",parent,".posteriors.mu_m.pdf"),height=5,width=5)
-    plot(density(mysim$mu_m),main="Posterior for mu_m",lwd=2,xlab="mu_m")
-    curve(dnorm(x,36,sqrt(6 )),lwd=2,lty=2,add=T)
-    legend("topright",c("posterior","prior"),lwd=2,lty=c(1,2))
-    dev.off()
     
 
  
@@ -277,7 +290,7 @@ pdf(paste0("RSTAN_output_on_duoHMM_more_stringent/model1.6.mu_m_N_",mean_alpha_p
 if(myname=="maternal"){my.ylim=7}else {my.ylim=14}
 for(i in 1:ncol(mysim$beta_Age)){
     if(i==1){
-        plot(density(mysim$beta_Age[,i]),xlim=range(mysim$beta_Age),xlab="beta_Age",main="Posterior for beta_Age",col=mycols[as.character(cohort.codes[i,2])],lwd=2,ylim=c(0,my.ylim))
+        plot(density(mysim$beta_Age[,i]),xlim=c(-0.5,0.5),xlab="beta_Age",main="Posterior for beta_Age",col=mycols[as.character(cohort.codes[i,2])],lwd=2,ylim=c(0,my.ylim))
     }else {
         lines(density(mysim$beta_Age[,i]),col=mycols[as.character(cohort.codes[i,2])],lwd=2)
     }
@@ -294,7 +307,8 @@ if(myname=="maternal"){
        polygon(x=rep(c(0.19-0.092,0.19+0.092),2)[c(1,2,4,3)],y=c(0,0,my.ylim,my.ylim),col=alpha("pink",0.2),border=NA)
        abline(v=0.19,lty=4,lwd=2)
        abline(v=-0.42,lty=4,lwd=2,col="grey")
-       legend("topright",c("Adam","decode","Hutterites","Julie"),lty=c(2,3,4,4),lwd=2,col=c("black","black","black","grey"),cex=0.5)
+       abline(v=-0.29,lty=4,lwd=3,col="darkgreen")
+       legend("topright",c("Campbell","Kong","Coop","Hussin","Bleazard"),lty=c(2,3,4,4,4),lwd=2,col=c("black","black","black","grey","darkgreen"),cex=0.5)
    }
     dev.off()
 
@@ -700,6 +714,8 @@ print(model1.5.mat,pars=c("beta_Age","omega","mu_m","sigmasq_m"),digits=4)
 
 pdf(paste0("RSTAN_output_on_duoHMM_more_stringent/model1.5.4.",myname,".posteriors.beta_Age.sigmasq_m_IG_",sigmasq_m_alpha,"_",sigmasq_m_beta,".pdf"),height=5,width=5)
 plot(density(mysim$beta_Age),xlim=range(mysim$beta_Age),xlab="beta_Age",main="Posterior for beta_Age",lwd=2)
+curve(dnorm(x,0,0.05),lty=2,lwd=2,add=T)
+legend("topright",c("posterior","prior"),lwd=2,lty=c(1,2))
 abline(v=0,lwd=2)
 dev.off()
 

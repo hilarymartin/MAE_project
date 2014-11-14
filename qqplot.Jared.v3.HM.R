@@ -3,8 +3,10 @@ cols=c("red","darkgreen","purple","blue","pink")
 argv <- commandArgs(TRUE)
 
 
-argv=c("QTR/duoHMM_results/QTR_minus_MZs.370K.1.post_MERLIN.more_stringent.generr_removed.recombinations.txt","QTR/input_for_SHAPEIT2/QTR_minus_MZs.370K.1.post_MERLIN.more_stringent.generr_removed.fam","qqplots_duoHMM_v3/QTR370.more_stringent",
-    "QTR/input_for_SHAPEIT2/QTR_minus_MZs.370K.1.post_MERLIN.more_stringent.generr_removed.map","QTR370","QTR")
+#argv=c("QTR/duoHMM_results/QTR_minus_MZs.370K.1.post_MERLIN.more_stringent.generr_removed.recombinations.txt","QTR/input_for_SHAPEIT2/QTR_minus_MZs.370K.1.post_MERLIN.more_stringent.generr_removed.fam","qqplots_duoHMM_v3/QTR370.more_stringent",
+#    "QTR/input_for_SHAPEIT2/QTR_minus_MZs.370K.1.post_MERLIN.more_stringent.generr_removed.map","QTR370","QTR")
+#argv=c("FC/duoHMM_results/FC.1.more_stringent.generr_removed.recombinations.txt","FC/input_for_SHAPEIT2/FC.1.more_stringent.generr_removed.fam","qqplots_duoHMM_v3/FC.more_stringent",
+#    "FC/input_for_SHAPEIT2/FC.1.more_stringent.generr_removed.map","FC","FC")
 
 
 threshold=0.5
@@ -26,7 +28,7 @@ qqr <- function(k1,rate,col1,makeplot=TRUE,title,limits,xlowerlimit,...) {
   l <- c(min(k1),min(max(k1),rate+6*sqrt(rate)))
   etmp <- e[k1>=l[2]]
   ret <- cbind(jitter(etmp),l[2])
-  
+ 
   if(makeplot) {
 #       plot(e,k1,type='n',xlab="",ylab="",ylim=limits,xlim=c(xlowerlimit,max(limits)),main=title,...)
              plot(e,k1,type='n',xlab="",ylab="",ylim=limits,xlim=limits,main=title,...)
@@ -165,10 +167,6 @@ remove.outliers=function(r,cohort){
     }
     return(r)
 }
-
-r=remove.outliers(r,cohort)
-
-
 r$duo <- paste0(r$CHILD,"-",r$PARENT)
 r$sex <- as.factor(c("Male","Female")[as.integer(fam[match(r$PARENT,fam$V2),5])] )
 #if the parent's mother and/or father is genotyped, or if the parent has > 2 kids
@@ -208,8 +206,12 @@ r$informative.3gen.2parents = fam[match(r$PARENT,fam$V2),]$grandparent & !r$CHIL
 r$informative.3gen.1parent = fam[match(r$PARENT,fam$V2),]$grandparent & r$CHILD %in% fam[fam[,3]=="0"|fam[,4]=="0",2] &
     (r$CHILD %in% fam[fam$total_same_parents==fam$total_same_mother,2]|r$CHILD %in% fam[fam$total_same_parents==fam$total_same_father,2])
 
+
+r.old=r
+r=remove.outliers(r,cohort)
+
 r$dummy=rep(TRUE,nrow(r))
-#calculate distance to nearest crossover
+                                        #calculate distance to nearest crossover
 r$diff <- c(NA,tail(r$END,-1) - head(r$START,-1))
 #set distance to NA if the adjacent rows are not the same chromosome, child or parent
 r$diff[c(FALSE,tail(r$chr,-1) != head(r$chr,-1)) | c(FALSE,tail(r$CHILD,-1) != head(r$CHILD,-1)) | c(FALSE,tail(r$PARENT,-1) != head(r$PARENT,-1))] <- NA
@@ -238,6 +240,17 @@ r.dup.pos <- r[r$xover %in% dup.pos$xover,]
 #pull out any crossovers that are duplicated within families
 r$father=fam[match(r$CHILD,fam[,2]),3]
 r$mother=fam[match(r$CHILD,fam[,2]),4]
+
+funny.families=r.old[!r.old$duo %in% r$duo,]
+if(nrow(funny.families)>0){
+funny.families$dummy=TRUE
+funny.families.rec=tabulateRecombination(funny.families,"dummy")
+funny.families.rec=funny.families.rec[order(funny.families.rec$CHILD,funny.families.rec$sex),]
+print(funny.families)
+write.table(funny.families.rec,paste0(argv[3],"_dodgy_families_removed.raw_crossover_counts.txt"),row.names=F,quote=F,sep="\t")
+}
+
+
 dup.pos.within.fam <- r[which(duplicated(r[,c("chr","START","END","father","mother")])),c("chr","START","END","father","mother")]
 dup.pos.within.fam$xover=paste(dup.pos.within.fam$chr,dup.pos.within.fam$START,dup.pos.within.fam$END,dup.pos.within.fam$father,dup.pos.within.fam$mother,sep="_")
 r$xover2=paste(r$chr,r$START,r$END,r$father,r$mother,sep="_")
@@ -362,14 +375,7 @@ rec.all <- tabulateRecombination(r,"dummy")
 rec.flt.all <- tabulateRecombination(r.flt,"dummy")
 #remove crossovers within X SNPs
 rec.flt1.all <- tabulateRecombination(r.flt1,"dummy")
-#no duplicate crossovers within or between families
-rec.flt2.all <- tabulateRecombination(r.flt2,"dummy")
-#no duplicate crossovers within families
-rec.flt3.all <- tabulateRecombination(r.flt3,"dummy")
-#remove crossovers in clusters of double crossovers within X SNPs
-rec.flt4.all <- tabulateRecombination(r.excl.windows.of.double.xovers.within.X.SNPs,"dummy")
-#remove crossovers in clusters of duplicate crossovers, after removing crossovers within X SNPs
-rec.flt5.all <- tabulateRecombination(r.excl.windows.of.duplicate.xovers.after.double.xovers.removal,"dummy")
+
 
 ### identify outliers in informative families in filtered set (remove crossovers within X SNPs )
 female.upper.limit=76
@@ -379,6 +385,20 @@ male.lower.limit=9
 
 outliers = rec.flt1.all[((rec.flt1.all$sex=="Female" & (rec.flt1.all$rec >female.upper.limit | rec.flt1.all$rec < female.lower.limit))|(rec.flt1.all$sex=="Male" & (rec.flt1.all$rec >male.upper.limit | rec.flt1.all$rec < male.lower.limit))) &
                             (rec.flt1.all$informative.2gen.2parents |rec.flt1.all$informative.3gen.2parents),]
+print(outliers)
+write.table(outliers,paste0(argv[3],"_outliers.no_double_crossovers_within_X_SNPsxt"),row.names=F,quote=F,sep="\t")
+if(FALSE){
+                                        #no duplicate crossovers within or between families
+rec.flt2.all <- tabulateRecombination(r.flt2,"dummy")
+#no duplicate crossovers within families
+rec.flt3.all <- tabulateRecombination(r.flt3,"dummy")
+#remove crossovers in clusters of double crossovers within X SNPs
+rec.flt4.all <- tabulateRecombination(r.excl.windows.of.double.xovers.within.X.SNPs,"dummy")
+#remove crossovers in clusters of duplicate crossovers, after removing crossovers within X SNPs
+rec.flt5.all <- tabulateRecombination(r.excl.windows.of.duplicate.xovers.after.double.xovers.removal,"dummy")
+
+
+
 
 r.flt1=r.flt1[!r.flt1$duo %in% outliers$duo,]
 rec=rec[!rec$duo %in% outliers$duo,]
@@ -765,7 +785,7 @@ mtext("Observed recombinations per chromosome",2,outer=T,cex=1.6,padj=-1)
 #legend("topleft",c("SHAPEIT2","Merlin"),col=cols[1:2],pch=16,bg='white')
 dev.off()
 }
-
+}
 #save.image(paste0(argv[3],".multiple_filters.RData"))
 }                                        #save.image(paste0(argv[3],".RData"))
 }

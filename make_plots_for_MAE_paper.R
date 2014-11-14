@@ -70,28 +70,48 @@ mycols=c("black","blue","red","green","orange","red4","purple","darkgreen","viol
 names(mycols)=c("CARL","FC","FVG","GPC","NTR","QTR370","QTR610","VB","ORCADES")
 
 #fixed effects meta-analysis of betas
+#informative_nuclear_families_duoHMM
 meta.fe=rma.uni(yi=summary.duohmm2.mat.results.by.cohort[1,-ncol(summary.duohmm2.mat.results.by.cohort)],sei=summary.duohmm2.mat.results.by.cohort[2,-ncol(summary.duohmm2.mat.results.by.cohort)],method="FE",weighted=T)
 pdf("/home/hilary/maternal_age_recombination/paper/figures/box_plot_of_beta_Age_from_LMM_on_informative_nuclear_families_duoHMM.pdf",height=4,width=6)
 plot(1:8,c(summary.duohmm2.mat.results.by.cohort[1,-ncol(summary.duohmm2.mat.results.by.cohort)],meta.fe$b),main="beta_age from LMM",ylim=c(-0.7,1),col=c(rep("white",7),"black"),pch=19,xaxt="n",xlab="Cohort",ylab="beta_age",cex=0.5)
-#axis(1,at=1:8,labels=c(gsub("duohmm.in.nftools.","",colnames(summary.duohmm2.mat.results.by.cohort)[-ncol(summary.duohmm2.mat.results.by.cohort)]),"meta-analysis"),tick=F,cex.axis=0.5)
 axis(1,at=1:8,labels=FALSE,tick=F,cex.axis=0.5)
 mylabels=c(gsub("duohmm.in.nftools.","",colnames(summary.duohmm2.mat.results.by.cohort)[-ncol(summary.duohmm2.mat.results.by.cohort)]),"meta-analysis")
 text(1:8, par("usr")[3] - 0.2, labels = mylabels, srt = 45, pos = 1, xpd = TRUE,cex=0.8)
-
 abline(h=0)
 sample.sizes= table(data1.mat.duohmm2$cohort)
 for(i in 1:7){
 my.x=i
 my.y=summary.duohmm2.mat.results.by.cohort[1,i]
-#scaling=0.05*sample.sizes[i]/sample.sizes[2]
 scaling=0.05
-#polygon(c(my.x-scaling,my.x-scaling,my.x+scaling,my.x+scaling),c(my.y-scaling,my.y+scaling,my.y+scaling,my.y-scaling))
 offset=0.02*sample.sizes[i]/sample.sizes[2]
 segments(x0=i,y0=summary.duohmm2.mat.results.by.cohort[1,i]-1.96*summary.duohmm2.mat.results.by.cohort[2,i],x1=i,y1=summary.duohmm2.mat.results.by.cohort[1,i]+1.96*summary.duohmm2.mat.results.by.cohort[2,i])
 polygon(c(my.x-scaling,my.x-scaling,my.x+scaling,my.x+scaling),c(my.y-offset,my.y+offset,my.y+offset,my.y-offset),col=mycols[names(sample.sizes)[i]],border=mycols[names(sample.sizes)[i]])
 }
 segments(x0=8,y0=meta.fe$ci.lb,x1=8,y1=meta.fe$ci.ub)
+dev.off()
 
+#informative_nuclear_families_duoHMM
+meta.fe=rma.uni(yi=summary.nftools.mat.results.by.cohort[1,-ncol(summary.nftools.mat.results.by.cohort)],sei=summary.nftools.mat.results.by.cohort[2,-ncol(summary.nftools.mat.results.by.cohort)],method="FE",weighted=T)
+pdf("/home/hilary/maternal_age_recombination/paper/figures/box_plot_of_beta_Age_from_LMM_on_informative_nuclear_families_NFTOOLS.pdf",height=4,width=6)
+plot(1:8,c(summary.nftools.mat.results.by.cohort[1,-ncol(summary.nftools.mat.results.by.cohort)],meta.fe$b),main="beta_age from LMM",ylim=c(-0.7,1),col=c(rep("white",7),"black"),pch=19,xaxt="n",xlab="Cohort",ylab="beta_age",cex=0.5)
+axis(1,at=1:8,labels=FALSE,tick=F,cex.axis=0.5)
+mylabels=c(gsub("nftools.","",colnames(summary.nftools.mat.results.by.cohort)[-ncol(summary.nftools.mat.results.by.cohort)]),"meta-analysis")
+text(1:8, par("usr")[3] - 0.2, labels = mylabels, srt = 45, pos = 1, xpd = TRUE,cex=0.8)
+abline(h=0)
+sample.sizes= table(data1.mat.nftools$cohort)
+colnames(summary.nftools.mat.results.by.cohort)=gsub("nftools.","",colnames(summary.nftools.mat.results.by.cohort))
+summary.nftools.mat.results.by.cohort=summary.nftools.mat.results.by.cohort[,c("FC","GPC","NTR","ORCADES","QTR370","QTR610","VB","all")]
+samples.sizes=sample.sizes[colnames(summary.nftools.mat.results.by.cohort)[1:7]]
+
+for(i in 1:7){
+my.x=i
+my.y=summary.nftools.mat.results.by.cohort[1,i]
+scaling=0.05
+offset=0.02*sample.sizes[i]/sample.sizes[2]
+segments(x0=i,y0=summary.nftools.mat.results.by.cohort[1,i]-1.96*summary.nftools.mat.results.by.cohort[2,i],x1=i,y1=summary.nftools.mat.results.by.cohort[1,i]+1.96*summary.nftools.mat.results.by.cohort[2,i])
+polygon(c(my.x-scaling,my.x-scaling,my.x+scaling,my.x+scaling),c(my.y-offset,my.y+offset,my.y+offset,my.y-offset),col=mycols[names(sample.sizes)[i]],border=mycols[names(sample.sizes)[i]])
+}
+segments(x0=8,y0=meta.fe$ci.lb,x1=8,y1=meta.fe$ci.ub)
 dev.off()
 
 
@@ -99,19 +119,15 @@ dev.off()
 meta.fe.all=rma.uni(yi=summary.duohmm.mat.results.by.cohort[1,1:9],sei=summary.duohmm.mat.results.by.cohort[2,1:9],method="FE",weighted=T)
 pdf("/home/hilary/maternal_age_recombination/paper/figures//box_plot_of_beta_Age_from_LMM_on_all_informative_duos_duoHMM.pdf",height=4,width=6)
 plot(1:10,c(summary.duohmm.mat.results.by.cohort[1,1:9],meta.fe.all$b),main="beta_age from LMM",ylim=c(-0.7,1),col=c(rep("white",9),"black"),pch=19,xaxt="n",xlab="Cohort",ylab="beta_age",cex=0.5)
-#axis(1,at=1:10,labels=c(gsub("duohmm.","",colnames(summary.duohmm.mat.results.by.cohort)[1:9]),"meta-analysis"),tick=F,cex.axis=0.5,las=2)
 axis(1,at=1:10,labels=FALSE,tick=F,cex.axis=0.5,las=2)
 mylabels=c(gsub("duohmm.","",colnames(summary.duohmm.mat.results.by.cohort)[1:9]),"meta-analysis")
 text(1:10, par("usr")[3] - 0.2, labels = mylabels, srt = 45, pos = 1, xpd = TRUE,cex=0.8)
-
 abline(h=0)
 sample.sizes= table(data1.mat.duohmm$cohort)
 for(i in 1:9){
 my.x=i
 my.y=summary.duohmm.mat.results.by.cohort[1,i]
-#scaling=0.05*sample.sizes[i]/sample.sizes[2]
 scaling=0.05
-#polygon(c(my.x-scaling,my.x-scaling,my.x+scaling,my.x+scaling),c(my.y-scaling,my.y+scaling,my.y+scaling,my.y-scaling))
 offset=0.02*sample.sizes[i]/sample.sizes[2]
 segments(x0=i,y0=summary.duohmm.mat.results.by.cohort[1,i]-1.96*summary.duohmm.mat.results.by.cohort[2,i],x1=i,y1=summary.duohmm.mat.results.by.cohort[1,i]+1.96*summary.duohmm.mat.results.by.cohort[2,i])
 polygon(c(my.x-scaling,my.x-scaling,my.x+scaling,my.x+scaling),c(my.y-offset,my.y+offset,my.y+offset,my.y-offset),col=mycols[names(sample.sizes)[i]],border=mycols[names(sample.sizes)[i]])
@@ -152,6 +168,38 @@ for(c in 1:length(cohorts)){
     legend("topright",paste0("p = ",round(my.lme$tTable[2,5],3)))
 }
 dev.off()
+
+
+data1.mat$inf.nuc.fam=data1.mat$duo %in% data0.mat$duo
+data1.mat$point.type=19
+data1.mat$point.type[!data1.mat$inf.nuc.fam]=3
+data1.mat$col="black"
+data1.mat$col[!data1.mat$inf.nuc.fam]="red"
+
+pdf("/home/hilary/maternal_age_recombination/paper/figures/scatterplots_of_duoHMM_crossovers_vs_age.informative_duos_vs_informative_nuc_fams.pdf",height=12,width=10)
+cohorts=c("CARL","FC","FVG","GPC","NTR","QTR370","QTR610","VB","ORCADES")
+par(mfrow=c(3,3))
+for(c in 1:length(cohorts)){
+    my.lme=summary(lme(nrec~age.at.birth,~1|as.factor(PARENT),data=data1.mat[data1.mat$cohort==cohorts[c],]))
+    if(sum(data1.mat$cohort==cohorts[c] & data1.mat$inf.nuc.fam)>0){
+        my.lme2=summary(lme(nrec~age.at.birth,~1|as.factor(PARENT),data=data1.mat[data1.mat$cohort==cohorts[c] & data1.mat$inf.nuc.fam,]))
+    }
+    
+    plot(data1.mat$age.at.birth[data1.mat$cohort!=cohorts[c]],data1.mat$nrec[data1.mat$cohort!=cohorts[c]],main=cohorts[c],xlab="maternal age at birth",ylab="Number of crossovers",col=alpha("grey",0.2),pch=19,
+     xlim=range(data1.mat$age.at.birth),ylim=c(20,80),cex=0.5,cex.main=2,cex.axis=1.5,cex.lab=1.5)
+    points(data1.mat$age.at.birth[data1.mat$cohort==cohorts[c]],data1.mat$nrec[data1.mat$cohort==cohorts[c]],pch=data1.mat$point.type[data1.mat$cohort==cohorts[c]],cex=0.5,col=data1.mat$col[data1.mat$cohort==cohorts[c]])
+    abline(a=my.lme$coefficients$fixed[1],b=my.lme$coefficients$fixed[2])
+    if(sum(data1.mat$cohort==cohorts[c] & data1.mat$inf.nuc.fam)>0){
+        abline(a=my.lme2$coefficients$fixed[1],b=my.lme2$coefficients$fixed[2],lty=2)
+    }
+    legend("topleft",c(paste0("slope_all = ",round(my.lme$coefficients$fixed[2],2)),paste0("p_all = ",round(my.lme$tTable[2,5],3))))
+    if(sum(data1.mat$cohort==cohorts[c] & data1.mat$inf.nuc.fam)>0){
+        legend("topright",c(paste0("slope_nuc = ",round(my.lme2$coefficients$fixed[2],2)),paste0("p_nuc = ",round(my.lme2$tTable[2,5],3))))
+    }
+
+}
+dev.off()
+
 
 
 #### Compare NFTOOLS to duoHMM counts

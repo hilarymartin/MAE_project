@@ -69,43 +69,36 @@ write.table(myquantiles,paste0(mydir,"/simulation_with_true_beta_Age_",beta_Age,
 
 if(FALSE){
 coverage.by.beta.age=list()
-for(i in 1:2){
-#    beta_Age = c(0.067,0.19)[i]
-    beta_Age = c(0,0.082)[i]
+exclude=list()
+for(i in 1:3){
+    beta_Age = c(0,0.001,0.01)[i]
     all.intervals=as.data.frame(matrix(NA,ncol=1000,nrow=6))
-#    for(sim.number in 1:1000){
-x=0
-    for(sim.number in 1001:2000){
-        if(sim.number!=1450){
-        x=x+1
-        intervals=read.delim(paste0(mydir,"/simulation_with_true_beta_Age_",beta_Age,".beta_Age_credible_intervals.",description,".simulation_",sim.number,".txt"),header=T,sep="")
-        all.intervals[,x]=intervals
+    for(sim.number in 1:1000){
+        if(file.exists(paste0(mydir,"/simulation_with_true_beta_Age_",beta_Age,".beta_Age_credible_intervals.",description,".simulation_",sim.number,".txt"))){
+            intervals=read.delim(paste0(mydir,"/simulation_with_true_beta_Age_",beta_Age,".beta_Age_credible_intervals.",description,".simulation_",sim.number,".txt"),header=T,sep="")
+            all.intervals[,sim.number]=intervals
     }
     }
+    exclude[[i]]=which(colSums(is.na(all.intervals))!=0)
     all.intervals=all.intervals[,colSums(is.na(all.intervals))==0]
     coverage.by.beta.age[[i]]=all.intervals
     coverage=c(sum(all.intervals[1,]<beta_Age & all.intervals[2,] > beta_Age), sum(all.intervals[1,]<0 & all.intervals[2,] > 0),sum(all.intervals[3,]<beta_Age & all.intervals[4,] > beta_Age),
         sum(all.intervals[3,]<0 & all.intervals[4,] > 0),sum(all.intervals[5,]<beta_Age & all.intervals[6,] > beta_Age), sum(all.intervals[5,]<0 & all.intervals[6,] > 0))/ncol(all.intervals)
     names(coverage)=c("coverage_beta_Age_67%","coverage_0_67%","coverage_beta_Age_95%","coverage_0_95%","coverage_beta_Age_99%","coverage_0_99%")
-    write.table(coverage,paste0("/home/hilary/maternal_age_recombination/coverage_probabilities_of_beta_Age.simulated_with_beta_Age_",beta_Age,
-".",description,".txt"),quote=F,sep="\t")
+    write.table(coverage,paste0("/home/hilary/maternal_age_recombination/frequentist_properties/coverage_probabilities_of_beta_Age.simulated_with_beta_Age_",beta_Age,".",description,".txt"),quote=F,sep="\t")
 }
 
-for(i in 1:2){
-    beta_Age = c(0,0.082)[i]
-    beta.posteriors=NULL
-#    for(sim.number in 1:1000){
-    for(sim.number in 1001:2000){
-                if(sim.number!=1450){
-                    load(paste0(mydir,"/simulation_with_true_beta_Age_",beta_Age,
-                                ".beta_Age_posteriors.",description,".simulation_",sim.number,".RData"))
-        beta.posteriors=cbind(beta.posteriors,beta.posterior)
+for(i in 1:3){
+    beta_Age = c(0,0.067,0.082)[i]
+        beta.posteriors=NULL
+    for(sim.number in 1:1000){
+                if(!sim.number %in% exclude[[i]]){
+                    load(paste0(mydir,"/simulation_with_true_beta_Age_",beta_Age,".beta_Age_posteriors.",description,"simulation_",sim.number,".RData"))
+                    beta.posteriors=cbind(beta.posteriors,beta.posterior)
                     rm(beta.posterior)
                 }
             }
-    pdf(paste0("/home/hilary/maternal_age_recombination/distribution_of_beta_Age_posteriors.simulated_with_beta_Age_",beta_Age,
-               ".",description,".pdf"),height=5,width=5)
-#    for(sim.number in 1:1000){
+    pdf(paste0("/home/hilary/maternal_age_recombination/frequentist_properties/distribution_of_beta_Age_posteriors.simulated_with_beta_Age_",beta_Age,".",description,".pdf"),height=5,width=5)
     for(sim.number in 1:ncol(beta.posteriors)){
         if(sim.number==1){
             plot(density(beta.posteriors[,sim.number]),xlab="beta_Age",main="posteriors of beta_Age",ylim=c(0,12))

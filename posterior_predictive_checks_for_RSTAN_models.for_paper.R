@@ -2,6 +2,7 @@ library(rstan)
 library(scales)
 load("/well/donnelly/hilary/maternal_age_and_recombination/duoHMM_data_for_RSTAN.more_stringent.RData")
 argv <- commandArgs(trailingOnly = TRUE)
+#argv=9
 print(argv)
 setwd("/well/donnelly/hilary/maternal_age_and_recombination/")
 
@@ -43,8 +44,6 @@ if(argv[1]==1){
     my.model=3
     J=length(y)
     mydir="RSTAN_output_on_duoHMM_more_stringent/model3"
-
-
     #stanmodel=stan_model("/well/donnelly/hilary/maternal_age_and_recombination/bin/RSTAN.model3.v2.adjusted_priors.stan")
     best.draw=sapply(1:(length(mysim)-1),function(i){
         x=mysim[[i]]
@@ -57,8 +56,6 @@ if(argv[1]==1){
     names(best.draw)=names(mysim)[1:(length(mysim)-1)]
     best.draw[["inv_omega"]]=1/best.draw[["omega"]]
     #umap <- optimizing(stanmodel, data=data2.pat2, init=best.draw)
-    
-    
 }else if(argv[1]==3){
     load("RSTAN_output_on_duoHMM_more_stringent/RSTAN.model3.2.adjusted_priors.all_chains.mat.including_alpha.RData")
     mysim<-extract(model3.2.mat,permuted=T)
@@ -71,7 +68,6 @@ if(argv[1]==1){
     my.model=3.2
     J=length(y)
     mydir="RSTAN_output_on_duoHMM_more_stringent/model3.2"
-
     #stanmodel=stan_model("/well/donnelly/hilary/maternal_age_and_recombination/bin/RSTAN.model3.2.adjusted_priors.stan")
     best.draw=sapply(1:(length(mysim)-1),function(i){
         x=mysim[[i]]
@@ -84,7 +80,6 @@ if(argv[1]==1){
     names(best.draw)=names(mysim)[1:(length(mysim)-1)]
     best.draw[["inv_omega"]]=1/best.draw[["omega"]]
     #umap <- optimizing(stanmodel, data=data2.mat2, init=best.draw)
-
 }else if(argv[1]==4){
     load("RSTAN_output_on_duoHMM_more_stringent/RSTAN.model3.2.adjusted_priors.all_chains.pat.including_alpha.RData")
     mysim<-extract(model3.2.pat,permuted=T)
@@ -111,12 +106,15 @@ if(argv[1]==1){
     best.draw[["inv_omega"]]=1/best.draw[["omega"]]
     #umap <- optimizing(stanmodel, data=data2.pat2, init=best.draw)
 
-} else if(argv[1]==5){        
+
+if(FALSE){
+#else if(argv[1]==5){        
 #### Model 1.5 -- negative binomial model for informative families only
    load("RSTAN_output_on_duoHMM_more_stringent/RSTAN.modell1.5.all_chains.mat.including_alpha.RData")
     mysim<-extract(model1.5.mat,permuted=T)
     y=data1.mat2$y
     cohort=data1.mat2$cohort
+   cohort.by.family=data1.mat2$cohort_by_family
     mother=data1.mat2$family
     cohort.codes=read.delim("RSTAN_output/key_for_maternal_cohorts_to_include_in_model_1.more_stringent.txt",header=T,stringsAsFactors=F)
     Age=data1.mat2$Age
@@ -141,13 +139,14 @@ if(argv[1]==1){
    #umap <- optimizing(stanmodel, data=data1.mat2, init=best.draw)
 
     
-} else if(argv[1]==6){
+#} else if(argv[1]==6){
         
 #### Model 1.5 -- negative binomial model for informative families only
     load("/well/donnelly/hilary/maternal_age_and_recombination/RSTAN_output_on_duoHMM_more_stringent/RSTAN.modell1.5.all_chains.pat.including_alpha.RData")
     mysim<-extract(model1.5.pat,permuted=T)
     y=data1.pat2$y
     cohort=data1.pat2$cohort
+    cohort.by.family=data1.pat2$cohort_by_family
     mother=data1.pat2$family
     cohort.codes=read.delim("RSTAN_output/key_for_paternal_cohorts_to_include_in_model_1.more_stringent.txt",header=T,stringsAsFactors=F)
     Age=data1.pat2$Age
@@ -170,7 +169,9 @@ if(argv[1]==1){
       best.draw[["inv_omega"]]=1/best.draw[["omega"]]
     #umap <- optimizing(stanmodel, data=data1.pat2, init=best.draw)
    
-} else if(argv[1]==7){    
+#}
+ }
+}else if(argv[1]==7){    
 #### Model 1.6 -- beta_Age drawn from distribution; alphas drawn from N(mu_cohort,sigmasq)
     cohort_by_family=rep(NA,data1.mat2$I)
     for(i in 1:data1.mat2$I){
@@ -182,6 +183,7 @@ if(argv[1]==1){
     mysim<-extract(model1.6.mat,permuted=T)
     y=data1.mat2$y
     cohort=data1.mat2$cohort
+    cohort.by.family=data1.mat2$cohort_by_family
     mother=data1.mat2$family
     cohort.codes=read.delim("RSTAN_output/key_for_maternal_cohorts_to_include_in_model_1.more_stringent.txt",header=T,stringsAsFactors=F)
     Age=data1.mat2$Age
@@ -213,6 +215,7 @@ if(argv[1]==1){
     mysim<-extract(model1.6.pat,permuted=T)
     y=data1.pat2$y
     cohort=data1.pat2$cohort
+    cohort.by.family=data1.pat2$cohort_by_family
     mother=data1.pat2$family
     cohort.codes=read.delim("RSTAN_output/key_for_paternal_cohorts_to_include_in_model_1.more_stringent.txt",header=T,stringsAsFactors=F)
     Age=data1.pat2$Age
@@ -253,6 +256,7 @@ if(argv[1]==1){
     mysim<-extract(model1.6.mat,permuted=T)
     y=data1.mat2$y
     cohort=data1.mat2$cohort
+    cohort.by.family=data1.mat2$cohort_by_family
     mother=data1.mat2$family
     cohort.codes=read.delim("RSTAN_output/key_for_maternal_cohorts_to_include_in_model_1.more_stringent.txt",header=T,stringsAsFactors=F)
     Age=data1.mat2$Age
@@ -289,6 +293,7 @@ if(argv[1]==1){
     mysim<-extract(model1.6.pat,permuted=T)
     y=data1.pat2$y
     cohort=data1.pat2$cohort
+    cohort.by.family=data1.pat2$cohort_by_family
     mother=data1.pat2$family
     cohort.codes=read.delim("RSTAN_output/key_for_paternal_cohorts_to_include_in_model_1.more_stringent.txt",header=T,stringsAsFactors=F)
     Age=data1.pat2$Age
@@ -325,6 +330,7 @@ if(argv[1]==1){
     mysim<-extract(model1.5.mat,permuted=T)
     y=data1.mat2$y
     cohort=data1.mat2$cohort
+    cohort.by.family=data1.mat2$cohort_by_family
     mother=data1.mat2$family
     cohort.codes=read.delim("RSTAN_output/key_for_maternal_cohorts_to_include_in_model_1.more_stringent.txt",header=T,stringsAsFactors=F)
     Age=data1.mat2$Age
@@ -359,6 +365,7 @@ if(argv[1]==1){
     mysim<-extract(model1.5.pat,permuted=T)
     y=data1.pat2$y
     cohort=data1.pat2$cohort
+     cohort.by.family=data1.pat2$cohort_by_family
     mother=data1.pat2$family
     cohort.codes=read.delim("RSTAN_output/key_for_paternal_cohorts_to_include_in_model_1.more_stringent.txt",header=T,stringsAsFactors=F)
     Age=data1.pat2$Age
@@ -413,59 +420,38 @@ predict_y<-function(a0=NA,mu_m=NA,beta_Age,age,cohort,beta_Cohort=NA,p_by_cohort
     }
 }
 
-simulate_y<-function(N,a0=NA,mu_m=NA,beta_Age,age,cohort,beta_Cohort=NA,p_by_cohort=NA,tausq=NA,omega=NA,model){
-    if(model==1|model==1.3|model==1.32|model==1.33){#cohort-specific age effects, from different or from common distribution
-        my_beta_Cohort <- c(0,beta_Cohort)
-        return(rnorm(N,mean=(a0+beta_Age[cohort]*age+my_beta_Cohort[cohort]),sd=sqrt(tausq)))
-    }else if(model==1.2){#commmon age effect
-        my_beta_Cohort <- c(0,beta_Cohort)
-        return(rnorm(N,mean=(a0+beta_Age*age+my_beta_Cohort[cohort]),sd=sqrt(tausq)))
-    }else if(model==1.4){#no cohort effect
-        return(rnorm(N,mean=(a0+beta_Age[cohort]*age),sd=sqrt(tausq)))
-    }else if(model ==1.5){ #don't think we can parallelize this
-            my_beta_Cohort <- c(0,beta_Cohort)
-        draws=sapply(1:N,function(i){
-            return(rnbinom(1,size=exp(0.1*(a0[i]+beta_Age[cohort[i]]*age[i]+my_beta_Cohort[cohort[i]]))/(omega-1),prob=1/omega))
+simulate_y<-function(N,a0=NA,mu_m=NA,sigmasq_m=NA,beta_Age,age,cohort,cohort.by.family=NA,family,beta_Cohort=NA,p_by_cohort=NA,tausq=NA,omega=NA,model){
+  family.effects=c()
+  if(model ==1.54){ #don't think we can parallelize this
+    for(c in 1:length(unique(cohort.by.family))){
+      family.effects=c(family.effects,rnorm(n=sum(cohort.by.family ==c),mean=mu_m[c],sd=sqrt(sigmasq_m[c])))}
+    a0=family.effects[family]
+    draws=sapply(1:N,function(i){
+      return(rnbinom(1,size=exp(0.1*(a0[i]+beta_Age*age[i]))/(omega-1),prob=1/omega))
         })
-        return(draws)
-    }else if(model ==1.54){ #don't think we can parallelize this
-        draws=sapply(1:N,function(i){
-            return(rnbinom(1,size=exp(0.1*(a0[i]+beta_Age*age[i]))/(omega-1),prob=1/omega))
-        })
-        return(draws)
-    }else if(model ==1.52|model==1.53){ #don't think we can parallelize this
-            my_beta_Cohort <- c(0,beta_Cohort)
-            draws=sapply(1:N,function(i){
-                return(rnbinom(1,size=exp(a0[i]+beta_Age[cohort[i]]*age[i]+my_beta_Cohort[cohort[i]])/(omega-1),prob=1/omega))
-            })
         return(draws)
     } else if(model==1.6){#cohort-specific age effects, from different or from common distribution
-        return(rnorm(N,mean=(a0+beta_Age[cohort]*age),sd=sqrt(tausq)))
+      for(c in 1:length(unique(cohort.by.family))){
+        family.effects=c(family.effects,rnorm(n=sum(cohort.by.family ==c),mean=mu_m[c],sd=sqrt(sigmasq_m[c])))}
+      a0=family.effects[family]
+      return(rnorm(N,mean=(a0+beta_Age[cohort]*age),sd=sqrt(tausq)))
     }else if(model==1.62){#common age effect, family effects from distribution with cohort-specific mean
-        return(rnorm(N,mean=(a0+beta_Age*age),sd=sqrt(tausq)))
-    }else if(model==1.7){#like model 1.3, but Y~student_t
-        #see Gelman p 581 on how to simulate a non-central t distribution
-        nu=5
-        z=rnorm(N,mean=0,sd=1)
-        x=rchisq(N,df=nu)
-        my_beta_Cohort <- c(0,beta_Cohort)
-        means=a0+beta_Age[cohort]*age+my_beta_Cohort[cohort] 
-        draws = means + sqrt(tausq)*z*sqrt(nu/x)
-        return(draws)
-    }else if(model==2){#cohort-specific age effects from different distirbutions, no family effect
-        my_beta_Cohort <- c(0,beta_Cohort)
-        return(rnorm(N,mean=(mu_m+beta_Age[cohort]*age+my_beta_Cohort[cohort]),sd=sqrt(tausq)))
-    }else if(model==2.2){#cohort-specific age effects from same distribution, no family effect
-        my_beta_Cohort <- c(0,beta_Cohort)
-        return(rnorm(N,mean=(mu_m+beta_Age*age+my_beta_Cohort[cohort]),sd=sqrt(tausq)))
+      for(c in 1:length(unique(cohort.by.family))){
+        family.effects=c(family.effects,rnorm(n=sum(cohort.by.family ==c),mean=mu_m[c],sd=sqrt(sigmasq_m[c])))}
+      a0=family.effects[family]
+      return(rnorm(N,mean=(a0+beta_Age*age),sd=sqrt(tausq)))
     }else if(model ==3){ #don't think we can parallelize this
-        draws=sapply(1:N,function(i){
-            return(rnbinom(1,size=exp(0.1*(a0[i]+beta_Age[cohort[i]]*age[i]))/(omega-1),prob=(1/(p_by_cohort[cohort[i]] * (omega-1) + 1))))
+      family.effects=rnorm(n=length(unique(family)),mean=mu_m,sd=sqrt(sigmasq_m))
+a0=family.effects[data2.mat2$family]
+      draws=sapply(1:N,function(i){
+        return(rnbinom(1,size=exp(0.1*(a0[i]+beta_Age[cohort[i]]*age[i]))/(omega-1),prob=(1/(p_by_cohort[cohort[i]] * (omega-1) + 1))))
         })
         return(draws)
     }else if(model==3.2){
-        draws=sapply(1:N,function(i){
-            return(rnbinom(1,size=exp(0.1*(a0[i]+beta_Age*age[i]))/(omega-1),prob=(1/(p_by_cohort[cohort[i]] * (omega-1) + 1))))
+      family.effects=rnorm(n=length(unique(family)),mean=mu_m,sd=sqrt(sigmasq_m))
+a0=family.effects[data2.mat2$family]
+      draws=sapply(1:N,function(i){
+        return(rnbinom(1,size=exp(0.1*(a0[i]+beta_Age*age[i]))/(omega-1),prob=(1/(p_by_cohort[cohort[i]] * (omega-1) + 1))))
         })
         return(draws)
     }
@@ -475,7 +461,6 @@ simulate_y<-function(N,a0=NA,mu_m=NA,beta_Age,age,cohort,beta_Cohort=NA,p_by_coh
 test_10pc_90pc <- function (y){
 return (abs(quantile(y,0.9)-median(y))-abs(quantile(y,0.1)-median(y)))
 }
-
 
 cat("write out different estimates\n")
 if(my.model==1){
@@ -564,63 +549,89 @@ write.table(all.estimates,paste0(mydir,"/parameter_estimates.",description,".txt
 
 cat("plot histograms of observed data and data simulated using parameters from draw with highest -log likelihood\n")
 best.draw.sims=NULL
-for(i in 1:100){
-    if(my.model==1|my.model==1.3|my.model==1.32|my.model==1.33|my.model==1.7){
-        y.sim <- simulate_y(N=J,a0=best.draw$a0[mother],beta_Age=best.draw$beta_Age,age=Age,tausq=best.draw$tausq,cohort=cohort,beta_Cohort=best.draw$beta_Cohort,model=my.model)
-    }else if(my.model==1.2){
-        y.sim <- simulate_y(N=J,a0=best.draw$a0[mother],beta_Age=best.draw$beta_Age,age=Age,tausq=best.draw$tausq,cohort=cohort,beta_Cohort=best.draw$beta_Cohort,model=my.model)
-    }else if(my.model==1.4|my.model==1.6|my.model==1.62){
-        y.sim <- simulate_y(N=J,a0=best.draw$a0[mother],beta_Age=best.draw$beta_Age,age=Age,tausq=best.draw$tausq,cohort=cohort,model=my.model)
-    }else if(my.model==1.5|my.model==1.52|my.model==1.53){
-        y.sim <- simulate_y(N=J,a0=best.draw$exp_a0[mother],beta_Age=best.draw$beta_Age,age=Age,omega=best.draw$omega,cohort=cohort,beta_Cohort=best.draw$beta_Cohort,model=my.model)
-    }else if(my.model==1.54){
-        y.sim <- simulate_y(N=J,a0=best.draw$exp_a0[mother],beta_Age=best.draw$beta_Age,age=Age,omega=best.draw$omega,cohort=cohort,model=my.model)
-    }else if(my.model==2){
-        y.sim <- simulate_y(N=J,mu_m=best.draw$mu_m,beta_Age=best.draw$beta_Age,age=Age,tausq=best.draw$tausq,cohort=cohort,beta_Cohort=best.draw$beta_Cohort,model=my.model)
-    }else if(my.model==2.2){
-        y.sim <- simulate_y(N=J,mu_m=best.draw$mu_m,beta_Age=best.draw$beta_Age,age=Age,tausq=best.draw$tausq,cohort=cohort,beta_Cohort=best.draw$beta_Cohort,model=my.model)
-    }else if(my.model==3){
-        y.sim <- simulate_y(N=J,a0=best.draw$exp_a0[mother],beta_Age=best.draw$beta_Age,age=Age,omega=best.draw$omega,cohort=cohort,p_by_cohort=best.draw$p_by_cohort,model=my.model)
-    }else if(my.model==3.2){
-        y.sim <- simulate_y(N=J,a0=best.draw$exp_a0[mother],beta_Age=best.draw$beta_Age,age=Age,omega=best.draw$omega,cohort=cohort,p_by_cohort=best.draw$p_by_cohort,model=my.model)
-    }
-    best.draw.sims=rbind(best.draw.sims,y.sim)
+#simulate_y<-function(N,a0=NA,mu_m=NA,sigmasq_m=NA,beta_Age,age,cohort,cohort.by.family=NA,family,beta_Cohort=NA,p_by_cohort=NA,tausq=NA,omega=NA,model){
+for(i in 1:1000){
+  if(my.model==1.54){
+    y.sim <- simulate_y(N=J,beta_Age=best.draw$beta_Age,age=Age,omega=best.draw$omega,cohort=cohort,model=my.model,mu_m=best.draw$mu_m,sigmasq_m=best.draw$sigmasq_m,family=mother,cohort.by.family=cohort.by.family)
+}else if(my.model==1.4|my.model==1.6|my.model==1.62){
+  y.sim <- simulate_y(N=J,beta_Age=best.draw$beta_Age,age=Age,tausq=best.draw$tausq,cohort=cohort,model=my.model,mu_m=best.draw$mu_m,sigmasq_m=best.draw$sigmasq_m,family=mother,cohort.by.family=cohort.by.family)
+}else if(my.model==3){
+  y.sim <- simulate_y(N=J,beta_Age=best.draw$beta_Age,age=Age,omega=best.draw$omega,cohort=cohort,p_by_cohort=best.draw$p_by_cohort,model=my.model,mu_m=best.draw$mu_m,sigmasq_m=best.draw$sigmasq_m,family=mother)
+} else if (my.model==3.2){
+  y.sim <- simulate_y(N=J,beta_Age=best.draw$beta_Age,age=Age,omega=best.draw$omega,cohort=cohort,p_by_cohort=best.draw$p_by_cohort,model=my.model,mu_m=best.draw$mu_m,sigmasq_m=best.draw$sigmasq_m,family=mother)
+}
+  best.draw.sims=rbind(best.draw.sims,y.sim)
 }
 
 pdf(paste(mydir,"/","ecdfs_of_observed_and_simulated_y_from_highest_lp_estimates.",description,".pdf",sep=""),height=5,width=5)
-for(i in 1:nrow(best.draw.sims)){
+#for(i in 1:nrow(best.draw.sims)){
+for(i in 1:100){
     if(i==1){
-        plot(ecdf(best.draw.sims[i,]),xlab="crossover counts",col="grey",verticals=T,main="ecdf of Y",pch=NA)
+        plot(ecdf(best.draw.sims[i,]),xlab="number of crossovers",col=alpha("grey",0.3),verticals=T,main="",pch=NA)
     } else {
-        lines(ecdf(best.draw.sims[i,]),col="grey",verticals=T,pch=NA)
+        lines(ecdf(best.draw.sims[i,]),col=alpha("grey",0.3),verticals=T,pch=NA)
     }
 }
-    lines(ecdf(y),col="red",verticals=T,pch=NA)
-legend("topleft",c("observed","simulated"),col=c("red","grey"),lty=1)
+    lines(ecdf(y),col="red",verticals=T,pch=NA,lwd=2)
+legend("topleft",c("observed","simulated"),col=c("red","grey"),lty=1,lwd=c(2,1),bg="white")
 dev.off()
 
 
 if(my.model<3){
-    pdf(paste(mydir,"/","ecdfs_of_observed_and_simulated_y_from_highest_lp_estimates.by_cohort.",description,".pdf",sep=""),height=9,width=9)
-    par(mfrow=c(3,3))
+    pdf(paste(mydir,"/","ecdfs_of_observed_and_simulated_y_from_highest_lp_estimates.by_cohort.",description,".pdf",sep=""),height=10,width=10)
+#    par(mfrow=c(3,3))
+    par(mar=c(4,6,4,1),mfrow=c(3,3),oma=c(2,1,2,0))
 } else {
     pdf(paste(mydir,"/","ecdfs_of_observed_and_simulated_y_from_highest_lp_estimates.by_cohort.",description,".pdf",sep=""),height=12,width=21)
-    par(mfrow=c(4,7))
+ #   par(mfrow=c(4,7))
+    par(mar=c(2,2,2,1),mfrow=c(4,7),oma=c(2,2,2,0))
+    
 }
 for(c in 1:length(unique(cohort))){
-for(i in 1:nrow(best.draw.sims)){
+#for(i in 1:nrow(best.draw.sims)){
+    for(i in 1:100){
     if(i==1){
-        plot(ecdf(best.draw.sims[i,cohort==c]),xlab="crossover counts",col="grey",verticals=T,main=paste0(cohort.codes[cohort.codes$Code==c,"Cohort"],", n=",sum(cohort==c)),pch=NA,cex.main=1,cex.lab=2,cex.axis=2)
+        plot(ecdf(best.draw.sims[i,cohort==c]),xlab="number of crossovers",col=alpha("grey",0.3),verticals=T,main=paste0(cohort.codes[cohort.codes$Code==c,"Cohort"]),pch=NA,cex.main=2,cex.lab=2,cex.axis=1.5)
     } else {
-        lines(ecdf(best.draw.sims[i,cohort==c]),col="grey",verticals=T,pch=NA)
+        lines(ecdf(best.draw.sims[i,cohort==c]),col=alpha("grey",0.3),verticals=T,pch=NA)
     }
 }
-lines(ecdf(y[cohort==c]),col="red",verticals=T,pch=NA)
+lines(ecdf(y[cohort==c]),col="red",verticals=T,pch=NA,lwd=2)
 if(c==1){
-legend("topleft",c("observed","simulated"),col=c("red","grey"),lty=1,cex=0.8)
+legend("topleft",c("observed","simulated",paste0("n=",sum(cohort==c))),col=c("red","grey",NA),lty=c(1,1,NA),cex=1.2,lwd=c(2,1,NA),bg="white")
+}else{
+legend("topleft",paste0("n=",sum(cohort==c)),cex=1.2,bg="white")
 }
+
 }
 dev.off()
+
+pdf(paste(mydir,"/","histograms_of_observed_and_simulated_y_from_highest_lp_estimates.",description,".simulation1.pdf",sep=""),height=5,width=5)
+obs.hist=hist(y,plot=F)
+i=1
+sim.hist=hist(best.draw.sims[i,],plot=F)
+both.breaks=obs.hist$breaks
+if(max(best.draw.sims[i,])>max(both.breaks)){
+    gaps=both.breaks[2]-both.breaks[1]
+    while(both.breaks[length(both.breaks)] <max(best.draw.sims[i,])){
+        both.breaks=c(both.breaks,both.breaks[length(both.breaks)]+gaps)
+    }
+}
+if(min(best.draw.sims[i,])<min(both.breaks)){
+    gaps=both.breaks[2]-both.breaks[1]
+    while(both.breaks[1] >min(best.draw.sims[i,])){
+        both.breaks=c(both.breaks[1]-gaps,both.breaks)
+    }
+}
+sim.hist=hist(best.draw.sims[i,],plot=F,breaks=both.breaks)
+hist(y,main=paste0("simulation ",i),xlab="number of crossovers",xlim=range(c(obs.hist$breaks,sim.hist$breaks)),cex.lab=1,cex.main=1,cex.axis=1,col=alpha("red",0.5),ylim=range(c(obs.hist$counts,sim.hist$counts)))
+hist(best.draw.sims[i,],col=alpha("blue",0.5),add=T,breaks=both.breaks)
+if(i==1){
+    legend("topleft",c("observed","simulated"),fill=c(alpha("red",0.5),alpha("blue",0.5)),cex=1)
+}
+
+dev.off()
+
 
 pdf(paste(mydir,"/","histograms_of_observed_and_simulated_y_from_highest_lp_estimates.",description,".pdf",sep=""),height=20,width=20)
 obs.hist=hist(y,plot=F)
@@ -666,27 +677,32 @@ max_best.draw.sim <- apply(best.draw.sims,1,max)
 min_best.draw.sim <- apply(best.draw.sims,1,min)
 test_10pc_90pc_best.draw.sim <-apply(best.draw.sims,1,test_10pc_90pc)
 
-pdf(paste(mydir,"/","histogram_of_summary_statistics.highest_lp_estimates.",description,".pdf",sep=""),height=10,width=15)
-par(mfrow=c(2,3))
-hist(mean_best.draw.sim,xlim=range(c(mean_y,mean_best.draw.sim)),xlab="mean predicted y",main="Mean",cex.main=2,cex.axis=2,cex.lab=2)
-abline(v=mean_y,col="red")
-legend("topright",paste("p=",round(mean(mean_best.draw.sim>=mean(y)),3)),cex=2)
+#pdf(paste(mydir,"/","histogram_of_summary_statistics.highest_lp_estimates.",description,".pdf",sep=""),height=10,width=15)
+pdf(paste(mydir,"/","histogram_of_summary_statistics.highest_lp_estimates.",description,".pdf",sep=""),height=10,width=10)
+#par(mfrow=c(2,3))
+#par(mfrow=c(2,2))
+par(mar=c(4,6,4,1),mfrow=c(2,2),oma=c(2,1,2,0))
+#hist(mean_best.draw.sim,xlim=range(c(mean_y,mean_best.draw.sim)),xlab="mean predicted y",main="Mean",cex.main=2,cex.axis=2,cex.lab=2)
+#abline(v=mean_y,col="red")
+#legend("topright",paste("p=",round(mean(mean_best.draw.sim>=mean(y)),3)),cex=2)
 
-hist(median_best.draw.sim,xlim=range(c(median_y,median_best.draw.sim)),xlab="median predicted y",main="Median",cex.main=2,cex.axis=2,cex.lab=2)
-abline(v=median_y,col="red")
-legend("topright",paste("p=",round(mean(median_best.draw.sim>=median(y)),3)),cex=2)
-
-hist(max_best.draw.sim,xlim=range(c(max_y,max_best.draw.sim)),xlab="maximum predicted y",main="Maximum",cex.main=2,cex.axis=2,cex.lab=2)
+hist(max_best.draw.sim,xlim=range(c(max_y,max_best.draw.sim)),xlab="maximum predicted y",main="Maximum",cex.main=2,cex.axis=1.5,cex.lab=1.5)
 abline(v=max_y,col="red")
-legend("topright",paste("p=",round(mean(max_best.draw.sim>=max(y)),3)),cex=2)
+legend("topright",paste("p=",round(mean(max_best.draw.sim>=max(y)),3)),cex=1.5,bty='n')
 
-hist(min_best.draw.sim,xlim=range(c(min_y,min_best.draw.sim)),xlab="minimum predicted y",main="Minimum",cex.main=2,cex.axis=2,cex.lab=2)
+hist(min_best.draw.sim,xlim=range(c(min_y,min_best.draw.sim)),xlab="minimum predicted y",main="Minimum",cex.main=2,cex.axis=1.5,cex.lab=1.5)
 abline(v=min_y,col="red")
-legend("topleft",paste("p=",round(mean(min_best.draw.sim>=min(y)),3)),cex=2)
+legend("topleft",paste("p=",round(mean(min_best.draw.sim>=min(y)),3)),cex=1.5,bty='n')
 
-hist(test_10pc_90pc_best.draw.sim,xlim=range(c(test_10pc_90pc_y,test_10pc_90pc_best.draw.sim)),xlab="|90pc_y - 50pc_y|-|10pc_y - 50pc_y|",main="Asymmetry",cex.main=2,cex.axis=2,cex.lab=2)
+
+hist(median_best.draw.sim,xlim=range(c(median_y,median_best.draw.sim)),xlab="median predicted y",main="Median",cex.main=2,cex.axis=1.5,cex.lab=1.5)
+abline(v=median_y,col="red")
+legend("topright",paste("p=",round(mean(median_best.draw.sim>=median(y)),3)),cex=1.5,bty='n')
+
+
+hist(test_10pc_90pc_best.draw.sim,xlim=range(c(test_10pc_90pc_y,test_10pc_90pc_best.draw.sim)),xlab="|90pc_y - 50pc_y|-|10pc_y - 50pc_y|",main="Asymmetry",cex.main=2,cex.axis=1.5,cex.lab=1.5)
 abline(v=test_10pc_90pc_y,col="red")
-legend("topright",paste("p=",round(mean(test_10pc_90pc_best.draw.sim>=test_10pc_90pc_y),3)),cex=2)
+legend("topleft",paste("p=",round(mean(test_10pc_90pc_best.draw.sim>=test_10pc_90pc_y),3)),cex=1.5,bty='n')
 
 dev.off()
 
@@ -767,7 +783,9 @@ classic_residuals=residual.list[[x]]
 description2=mydescriptions[x]
 ####plot residuals against age
 cat("plot residuals against age\n")
+
 pdf(paste(mydir,"/","residual_plot_vs_age.",description2,".pdf",sep=""),height=10,width=10)
+par(mar=c(4,6,4,0),oma=c(2,1,2,1))
 plot(Age,classic_residuals,ylab="estimated residual",xlab="Age",main="Estimated residuals vs. age",cex.lab=2,cex.main=2,cex.axis=2)
 abline(h=0,col="red")
 dev.off()
@@ -833,6 +851,7 @@ Age_binned[i]=mean(Age_sorted[c:min((c+increment),length(y_predict))])
 classic_residuals_binned[i]=mean(classic_residuals_sorted[c:min((c+increment),length(y_predict))])
 c=c+increment
 }
+par(mar=c(4,6,4,0),oma=c(2,1,2,1))
 plot(Age_binned,classic_residuals_binned,ylab="estimated residual, binned",xlab="Age, binned",main="Binned estimated residuals vs. Age",cex.lab=2,cex.main=2,cex.axis=2,
      ylim=c(-10,10),xlim=range(Age),col="white")
 abline(h=0,col="red")
@@ -846,6 +865,7 @@ for(i in 1:20){
     segments(quantile(my.repictions,0.25),classic_residuals_binned[i],quantile(my.repictions,0.75),classic_residuals_binned[i])
     c=c+increment
 }
+par(mar=c(4,6,4,0),oma=c(2,1,2,1))
 plot(Age_binned,range.25th.to.75th,ylab="interquartile range of residuals",xlab="Age,binned",main="Interquartile range of residuals vs. Age",cex.lab=2,cex.main=2,cex.axis=2)
 dev.off()
 
@@ -853,6 +873,7 @@ dev.off()
 ####plot residuals against predicted values
 cat("plot residuals against predicted values\n")
 pdf(paste(mydir,"/","residual_plot.",description2,".pdf",sep=""),height=10,width=10)
+par(mar=c(4,6,4,0),oma=c(2,1,2,1))
 plot(y_predict,classic_residuals,ylab="estimated residual",xlab="expected count",main="Estimated residuals vs. expected counts",cex.lab=2,cex.main=2,cex.axis=2)
 abline(h=0,col="red")
 dev.off()
@@ -860,7 +881,8 @@ dev.off()
 ###Distribution of residuals - density and qq plot
 cat("Distribution of residuals - density and qq plot\n")
 pdf(paste(mydir,"/","distribution_of_residuals.",description2,".pdf",sep=""),height=5,width=10)
-par(mfrow=c(1,2))
+par(mar=c(4,6,4,0),oma=c(2,1,2,1),mfrow=c(1,2))
+
 #density
 plot(density(classic_residuals),xlab="estimated residuals",main="Distribution of estimated residuals")
 #qqplot
@@ -874,14 +896,18 @@ dev.off()
 cat("plot residuals against predicted values, by cohort\n")
 if(my.model<3){
     pdf(paste(mydir,"/","residual_plot.by_cohort.",description2,".pdf",sep=""),height=9,width=9)
-    par(mfrow=c(3,3))
+    par(mar=c(4,6,4,1),mfrow=c(3,3),oma=c(2,1,2,0))
 } else {
     pdf(paste(mydir,"/","residual_plot.by_cohort.",description2,".pdf",sep=""),height=12,width=21)
-    par(mfrow=c(4,7))
+#    par(mfrow=c(4,7))
+    par(mar=c(4,6,4,1),mfrow=c(4,7),oma=c(2,1,2,0))
+    
 }
 for(c in 1:length(unique(cohort))){
-plot(y_predict[cohort==c],classic_residuals[cohort==c],ylab="estimated residual",xlab="expected count",main=paste0(cohort.codes[cohort.codes$Code==c,"Cohort"],", n=",sum(cohort==c)),cex.main=1,cex.lab=2,cex.axis=2)
+plot(y_predict[cohort==c],classic_residuals[cohort==c],ylab="estimated residual",xlab="expected count",main=paste0(cohort.codes[cohort.codes$Code==c,"Cohort"]),cex.main=2,cex.lab=1.5,cex.axis=1.5,
+     ylim=c(min(classic_residuals[cohort==c]),max(classic_residuals[cohort==c])+10))
 abline(h=0,col="red")
+legend("topleft",paste0("n=",sum(cohort==c)),cex=1.5,bty="n",bg="white")
 }
 dev.off()
 
@@ -890,14 +916,16 @@ dev.off()
 cat("Distribution of residuals - density and qq plot, by cohort\n")
 if(my.model<3){
     pdf(paste(mydir,"/","distribution_of_residuals.by_cohort.",description2,".pdf",sep=""),height=5*ceiling(max(cohort)/2),width=20)
-    par(mfrow=c(ceiling(max(cohort)/2),4))
+    par(mfrow=c(ceiling(max(cohort)/2),4),mar=c(4,6,4,1),oma=c(2,1,2,0))
 } else {
     pdf(paste(mydir,"/","distribution_of_residuals.by_cohort.",description2,".pdf",sep=""),height=5*ceiling(max(cohort)/2),width=20)
-    par(mfrow=c(ceiling(max(cohort)/2),4))
+        par(mfrow=c(ceiling(max(cohort)/2),4),mar=c(4,6,4,1),oma=c(2,1,2,0))
 }
 for(c in 1:length(unique(cohort))){
-    plot(density(classic_residuals[cohort==c]),xlab="estimated residuals",main=paste0(cohort.codes[cohort.codes$Code==c,"Cohort"],", n=",sum(cohort==c)),cex.main=1,cex.lab=2,cex.axis=2)
-    qqnorm(classic_residuals[cohort==c],xlab="Expected",ylab="Observed",main=paste0("QQ plot of residuals for ",cohort.codes[cohort.codes$Code==c,"Cohort"]),cex.main=1,cex.lab=2,cex.axis=2,cex=2)
+    plot(density(classic_residuals[cohort==c]),xlab="estimated residuals",main=paste0(cohort.codes[cohort.codes$Code==c,"Cohort"]," distribution of residuals"),cex.main=2,cex.lab=2,cex.axis=2)
+    legend("topleft",paste0("n=",sum(cohort==c)),cex=2)
+#    qqnorm(classic_residuals[cohort==c],xlab="Expected",ylab="Observed",main=paste0("QQ plot of residuals for ",cohort.codes[cohort.codes$Code==c,"Cohort"]),cex.main=1,cex.lab=2,cex.axis=2,cex=2)
+        qqnorm(classic_residuals[cohort==c],xlab="Expected",ylab="Observed",main=paste0(cohort.codes[cohort.codes$Code==c,"Cohort"]," qq plot"),cex.main=2,cex.lab=2,cex.axis=2,cex=2)
     qqline(classic_residuals[cohort==c],col="grey")
 }
 dev.off()
