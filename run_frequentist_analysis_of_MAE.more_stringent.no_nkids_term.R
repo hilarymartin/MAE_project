@@ -1,11 +1,37 @@
 #"duoHMM_data_for_RSTAN.NTR_v2.RData"
 library(nlme)
+
+duohmm.wo.art = read.delim("ART/maternal_crossovers.informative_meioses.with_twins_indicated.QTR_and_NTR_only_nonART_mothers.txt",header=T)
+
+duohmm.wo.art.lme.qtr610=lme(n.crossovers~age.at.birth,~1|as.factor(PARENT),data=duohmm.wo.art[duohmm.wo.art$cohort=="QTR610",])
+duohmm.wo.art.lme.NTR=lme(n.crossovers~age.at.birth,~1|as.factor(PARENT),data=duohmm.wo.art[duohmm.wo.art$cohort=="NTR",])
+
+duohmm.wo.pill=read.delim("ART/maternal_crossovers.informative_meioses.with_twins_indicated.NTR_only_non_pill_mothers.txt",header=T)
+duohmm.wo.pill.lme.NTR=lme(n.crossovers~age.at.birth,~1|as.factor(PARENT),data=duohmm.wo.pill[!is.na(duohmm.wo.pill$age.at.birth),])
+
 ##### test parental age in NFTOOLS data, all cohorts
 
 load("NFTOOLS_data_for_RSTAN.more_stringent.RData")
 data1.mat.nftools=data1.mat
 data1.pat.nftools=data1.pat
 
+
+data1.mat.nftools.wo.art = data1.mat.nftools[data1.mat.nftools$child %in% duohmm.wo.art$CHILD,]
+data1.mat.nftools.wo.pill = data1.mat.nftools[data1.mat.nftools$child %in% duohmm.wo.pill$CHILD,]
+
+nftools.wo.art.lme.qtr610=lme(Freq~age.at.birth,~1|as.factor(family),data=data1.mat.nftools.wo.art[data1.mat.nftools.wo.art$cohort=="QTR610",])
+nftools.wo.art.lme.NTR=lme(Freq~age.at.birth,~1|as.factor(family),data=data1.mat.nftools.wo.art[data1.mat.nftools.wo.art$cohort=="NTR",])
+
+nftools.wo.art.pill.NTR=lme(Freq~age.at.birth,~1|as.factor(family),data=data1.mat.nftools.wo.pill[!is.na(data1.mat.nftools.wo.pill$age.at.birth) & data1.mat.nftools.wo.pill$cohort=="NTR",])
+
+
+results.wo.art = rbind(summary(duohmm.wo.art.lme.qtr610)$tTable[2,],summary(duohmm.wo.art.lme.NTR)$tTable[2,],summary(nftools.wo.art.lme.qtr610)$tTable[2,],summary(nftools.wo.art.lme.NTR)$tTable[2,],summary(duohmm.wo.pill.lme.NTR)$tTable[2,],
+  summary(nftools.wo.art.pill.NTR)$tTable[2,])
+
+rownames(results.wo.art)=c("QTR610.duohmm.inf.wo.art","NTR.duohmm.inf.wo.art","QTR610.nftools.wo.art","NTR.nftools.wo.art","NTR.duohmm.inf.wo.pill","NTR.nftools.wo.pill")
+
+
+write.table(results.wo.art,"frequentist_analysis/lme.results.QTR610_and_NTR_without_ART_or_without_pill_mothers.txt",quote=F,sep="\t")
 
 
 all.nftools.mat.lme=lme(Freq~age.at.birth,~1|as.factor(family),data=data1.mat.nftools)
@@ -61,8 +87,9 @@ for(c in 1:length(pat.cohorts)){
     nftools.pat.results.by.cohort[[c]]=summary(cohort.nftools.pat.lme)
     cohort.nftools.pat.lm=summary(lm(adjusted.nrec~adjusted.age,data=data1.pat.nftools[data1.pat.nftools$cohort==pat.cohorts[c],]))
     nftools.pat.adjusted.results.by.cohort[[c]]=cohort.nftools.pat.lm
-    
-    spearman.cor=  cor.test(data1.pat.nftools[data1.pat.nftools$cohort==pat.cohorts[c],"adjusted.nrec"],data1.pat.nftools[data1.pat.nftools$cohort==pat.cohorts[c],"adjusted.age"],method="spearman")
+ 
+    spearman.cor=  cor.test(data1.pat.nftools[data1.pat.nftools$cohort==pat.cohorts[c],"adjusted.nrec"],data1.pat.nftools[data1.pat.nftools$cohort==pat.cohorts[c],"adjusted.age"],
+method="spearman")
     nftools.pat.adjusted.spearman.by.cohort=rbind(nftools.pat.adjusted.spearman.by.cohort,c(spearman.cor$estimate,spearman.cor$p.value))
 }
 all.pat.spearman.cor = cor.test(data1.pat.nftools[,"adjusted.nrec"],data1.pat.nftools[,"adjusted.age"],method="spearman")
@@ -80,6 +107,10 @@ summary.nftools.pat.adjusted.results.by.cohort=cbind(summary.nftools.pat.adjuste
 colnames(summary.nftools.pat.adjusted.results.by.cohort)=c(pat.cohorts,"all")
 
 load("duoHMM_data_for_RSTAN.more_stringent.RData")
+
+
+
+
 data1.mat.duohmm=data1.mat
 data1.pat.duohmm=data1.pat
 

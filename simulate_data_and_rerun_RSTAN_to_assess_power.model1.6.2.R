@@ -1,14 +1,15 @@
 library(rstan)
 library(parallel)
 
-description="model1.6.2.maternal.mu_m_N_41_100.sigmasq_m_IG_2_40"
+#description="model1.6.2.maternal.mu_m_N_41_100.sigmasq_m_IG_2_40"
+description="model1.6.2.paternal.mu_m_N_27_64.sigmasq_m_IG_2_15"
 mydir="RSTAN_output_on_duoHMM_more_stringent/model1.62"
-
-
-                                        #first prepare data for input
+               #first prepare data for input
 if(FALSE){
-    load("/well/donnelly/hilary/maternal_age_and_recombination/RSTAN_output_on_duoHMM_more_stringent/RSTAN.modell1.6.2.all_chains.mat.including_alpha.mu_m_N_41_100.sigmasq_m_IG_2_40.RData")
-    mysim<-extract(model1.6.mat,permuted=T)
+#    load("/well/donnelly/hilary/maternal_age_and_recombination/RSTAN_output_on_duoHMM_more_stringent/RSTAN.modell1.6.2.all_chains.mat.including_alpha.mu_m_N_41_100.sigmasq_m_IG_2_40.RData")
+      load("/well/donnelly/hilary/maternal_age_and_recombination/RSTAN_output_on_duoHMM_more_stringent/RSTAN.modell1.6.2.all_chains.pat.including_alpha.mu_m_N_27_64.sigmasq_m_IG_2_15.RData")
+#    mysim<-extract(model1.6.mat,permuted=T)
+    mysim<-extract(model1.6.pat,permuted=T)
     best.draw=sapply(1:(length(mysim)-1),function(i){
         x=mysim[[i]]
         if(class(x)=="array"){

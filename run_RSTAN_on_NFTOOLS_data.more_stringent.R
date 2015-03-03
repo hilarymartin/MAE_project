@@ -331,7 +331,8 @@ if(!print.only){
     print(model1.6.mat,pars=c("beta_Age","tausq","sigmasq_m","mu_m"),digits=4)
        save(model1.6.mat,file=paste0("/well/donnelly/hilary/maternal_age_and_recombination/RSTAN_output_with_NFTOOLS_more_stringent/RSTAN.modell1.6.2.all_chains.mat.including_alpha.mu_m_N_",mean_alpha_prior,"_",sigmasq_mu_m_prior, ".sigmasq_m_IG_",sigmasq_m_alpha,"_",sigmasq_m_beta,".RData"))
 }else{
-    load(paste0("/well/donnelly/hilary/maternal_age_and_recombination/RSTAN_output_with_NFTOOLS_more_stringent/RSTAN.modell1.6.2.all_chains.mat.including_alpha.mu_m_N_",mean_alpha_prior,"_",sigmasq_mu_m_prior,".sigmasq_m_IG_",sigmasq_m_alpha,"_",sigmasq_m_beta,".RData"))
+    load(paste0("/well/donnelly/hilary/maternal_age_and_recombination/RSTAN_output_with_NFTOOLS_more_stringent/RSTAN.modell1.6.2.all_chains.mat.including_alpha.mu_m_N_",mean_alpha_prior,"_",sigmasq_mu_m_prior,
+                ".sigmasq_m_IG_",sigmasq_m_alpha,"_",sigmasq_m_beta,".RData"))
 }
     mysim<-extract(model1.6.mat,permuted=T)
     cohort.codes=read.delim("RSTAN_output/key_for_maternal_NFTOOLS_cohorts_to_include_in_model_1.more_stringent.txt",header=T)
@@ -359,7 +360,7 @@ if(!print.only){
     print(model1.6.pat,pars=c("beta_Age","tausq","sigmasq_m","mu_m"),digits=4)
      save(model1.6.pat,file=paste0("/well/donnelly/hilary/maternal_age_and_recombination/RSTAN_output_with_NFTOOLS_more_stringent/RSTAN.modell1.6.2.all_chains.pat.including_alpha.mu_m_N_",mean_alpha_prior,"_",sigmasq_mu_m_prior,".sigmasq_m_IG_",sigmasq_m_alpha,"_",sigmasq_m_beta,".RData"))
 } else {
-     load(paste0("/well/donnelly/hilary/maternal_age_and_recombination/RSTAN_output_with_NFTOOLS_more_stringent/RSTAN.modell1.6.2.all_chains.pat.including_alpha.mu_m_N_",mean_alpha_prior,"_",sigmasq_mu_m_prior,".sigmasq_m_IG_",sigmasq_m_alpha,"_",sigmasq_m_beta,".RData"))
+  load(paste0("/well/donnelly/hilary/maternal_age_and_recombination/RSTAN_output_with_NFTOOLS_more_stringent/RSTAN.modell1.6.2.all_chains.pat.including_alpha.mu_m_N_",mean_alpha_prior,"_",sigmasq_mu_m_prior,".sigmasq_m_IG_",sigmasq_m_alpha,"_",sigmasq_m_beta,".RData"))
  }
      mysim<-extract(model1.6.pat,permuted=T)
     cohort.codes=read.delim("RSTAN_output/key_for_paternal_NFTOOLS_cohorts_to_include_in_model_1.more_stringent.txt",header=T)

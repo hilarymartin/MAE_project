@@ -1,8 +1,8 @@
+
 library(rstan)
 library(scales)
 load("/well/donnelly/hilary/maternal_age_and_recombination/duoHMM_data_for_RSTAN.more_stringent.RData")
 argv <- commandArgs(trailingOnly = TRUE)
-#argv=9
 print(argv)
 setwd("/well/donnelly/hilary/maternal_age_and_recombination/")
 
@@ -13,6 +13,11 @@ if(argv[1]==1){
     cohort=data2.mat2$cohort
     mother=data2.mat2$family
     cohort.codes=read.delim("RSTAN_output/key_for_maternal_cohorts_to_include_in_model_3.more_stringent.txt",header=T,stringsAsFactors=F)
+
+    cohort.codes=cohort.codes[order(cohort.codes[,1]),]
+    cohort.codes$Pop=unlist(lapply(strsplit(cohort.codes$Cohort,".",fixed=T),function(x){return(x[[1]])}))
+    cohort.codes$Fam.type=sapply(1:nrow(cohort.codes),function(x){gsub(paste0(cohort.codes$Pop[x],"."),"",cohort.codes$Cohort[x])})
+
     Age=data2.mat2$Age
     description="model3.maternal"
     my.model=3
@@ -39,6 +44,11 @@ if(argv[1]==1){
     cohort=data2.pat2$cohort
     mother=data2.pat2$family
     cohort.codes=read.delim("RSTAN_output/key_for_paternal_cohorts_to_include_in_model_3.more_stringent.txt",header=T,stringsAsFactors=F)
+
+    cohort.codes=cohort.codes[order(cohort.codes[,1]),]
+    cohort.codes$Pop=unlist(lapply(strsplit(cohort.codes$Cohort,".",fixed=T),function(x){return(x[[1]])}))
+    cohort.codes$Fam.type=sapply(1:nrow(cohort.codes),function(x){gsub(paste0(cohort.codes$Pop[x],"."),"",cohort.codes$Cohort[x])})
+
     Age=data2.pat2$Age
     description="model3.paternal"
     my.model=3
@@ -59,14 +69,30 @@ if(argv[1]==1){
 }else if(argv[1]==3){
     load("RSTAN_output_on_duoHMM_more_stringent/RSTAN.model3.2.adjusted_priors.all_chains.mat.including_alpha.RData")
     mysim<-extract(model3.2.mat,permuted=T)
+
+#remove two FVG children who appear to be MZ twins and who have a very low # of crossovers (1 and 2, vs next lowest 14)
     y=data2.mat2$y
     cohort=data2.mat2$cohort
     mother=data2.mat2$family
     cohort.codes=read.delim("RSTAN_output/key_for_maternal_cohorts_to_include_in_model_3.more_stringent.txt",header=T,stringsAsFactors=F)
+
+    cohort.codes=cohort.codes[order(cohort.codes[,1]),]
+    cohort.codes$Pop=unlist(lapply(strsplit(cohort.codes$Cohort,".",fixed=T),function(x){return(x[[1]])}))
+    cohort.codes$Fam.type=sapply(1:nrow(cohort.codes),function(x){gsub(paste0(cohort.codes$Pop[x],"."),"",cohort.codes$Cohort[x])})
+
+
     Age=data2.mat2$Age
     description="model3.2.maternal"
     my.model=3.2
+
+    remove = which(y<14)
+    y=y[-remove]
+    cohort=cohort[-remove]
+    mother=mother[-remove]
+    mother[mother >168] =     mother[mother >168]-1 
+    Age=Age[-remove]
     J=length(y)
+
     mydir="RSTAN_output_on_duoHMM_more_stringent/model3.2"
     #stanmodel=stan_model("/well/donnelly/hilary/maternal_age_and_recombination/bin/RSTAN.model3.2.adjusted_priors.stan")
     best.draw=sapply(1:(length(mysim)-1),function(i){
@@ -87,6 +113,10 @@ if(argv[1]==1){
     cohort=data2.pat2$cohort
     mother=data2.pat2$family
     cohort.codes=read.delim("RSTAN_output/key_for_paternal_cohorts_to_include_in_model_3.more_stringent.txt",header=T,stringsAsFactors=F)
+    cohort.codes=cohort.codes[order(cohort.codes[,1]),]
+    cohort.codes$Pop=unlist(lapply(strsplit(cohort.codes$Cohort,".",fixed=T),function(x){return(x[[1]])}))
+    cohort.codes$Fam.type=sapply(1:nrow(cohort.codes),function(x){gsub(paste0(cohort.codes$Pop[x],"."),"",cohort.codes$Cohort[x])})
+
     Age=data2.pat2$Age
     description="model3.2.paternal"
     my.model=3.2
@@ -442,14 +472,16 @@ simulate_y<-function(N,a0=NA,mu_m=NA,sigmasq_m=NA,beta_Age,age,cohort,cohort.by.
       return(rnorm(N,mean=(a0+beta_Age*age),sd=sqrt(tausq)))
     }else if(model ==3){ #don't think we can parallelize this
       family.effects=rnorm(n=length(unique(family)),mean=mu_m,sd=sqrt(sigmasq_m))
-a0=family.effects[data2.mat2$family]
+#a0=family.effects[data2.mat2$family]
+a0=family.effects[family]
       draws=sapply(1:N,function(i){
         return(rnbinom(1,size=exp(0.1*(a0[i]+beta_Age[cohort[i]]*age[i]))/(omega-1),prob=(1/(p_by_cohort[cohort[i]] * (omega-1) + 1))))
         })
         return(draws)
     }else if(model==3.2){
       family.effects=rnorm(n=length(unique(family)),mean=mu_m,sd=sqrt(sigmasq_m))
-a0=family.effects[data2.mat2$family]
+#a0=family.effects[data2.mat2$family]
+a0=family.effects[family]
       draws=sapply(1:N,function(i){
         return(rnbinom(1,size=exp(0.1*(a0[i]+beta_Age*age[i]))/(omega-1),prob=(1/(p_by_cohort[cohort[i]] * (omega-1) + 1))))
         })
@@ -576,34 +608,49 @@ for(i in 1:100){
 legend("topleft",c("observed","simulated"),col=c("red","grey"),lty=1,lwd=c(2,1),bg="white")
 dev.off()
 
-
 if(my.model<3){
     pdf(paste(mydir,"/","ecdfs_of_observed_and_simulated_y_from_highest_lp_estimates.by_cohort.",description,".pdf",sep=""),height=10,width=10)
 #    par(mfrow=c(3,3))
-    par(mar=c(4,6,4,1),mfrow=c(3,3),oma=c(2,1,2,0))
+ #   par(mar=c(4,6,4,1),mfrow=c(3,3),oma=c(2,1,2,0))
+   par(mar=c(5,4,2,2),mfrow=c(3,3),oma=c(2,2,2,0))
 } else {
     pdf(paste(mydir,"/","ecdfs_of_observed_and_simulated_y_from_highest_lp_estimates.by_cohort.",description,".pdf",sep=""),height=12,width=21)
  #   par(mfrow=c(4,7))
-    par(mar=c(2,2,2,1),mfrow=c(4,7),oma=c(2,2,2,0))
+#    par(mar=c(2,2,2,1),mfrow=c(4,7),oma=c(2,2,2,0))
+par(mfrow=c(4,7),oma=c(2,2,2,0),mar=c(4,4,2,2))
+#par(mfrow=c(4,7),oma=c(2,2,2,0),mar=c(2,2,2,2))
+
+mylabels=c(paste(c("2 generations, >2 children","3 generations, 2 children","2 generations, 2 children"),"both parents",sep=", "),paste(c("2 generations, >2 children","3 generations, 2 children","2 generations, 2 children"),"1 parent",sep=", "))
+names(mylabels)=c("infor.2gen.2parents","infor.3gen.2parents","noninfor.2kids.2gen.2parents","infor.2gen.1parent","infor.3gen.1parent","noninfor.2kids.2gen.1parent")
     
 }
 for(c in 1:length(unique(cohort))){
-#for(i in 1:nrow(best.draw.sims)){
     for(i in 1:100){
     if(i==1){
-        plot(ecdf(best.draw.sims[i,cohort==c]),xlab="number of crossovers",col=alpha("grey",0.3),verticals=T,main=paste0(cohort.codes[cohort.codes$Code==c,"Cohort"]),pch=NA,cex.main=2,cex.lab=2,cex.axis=1.5)
+        plot(ecdf(best.draw.sims[i,cohort==c]),xlab="",col=alpha("grey",0.3),verticals=T,main="",pch=NA,cex.main=2,cex.lab=2,cex.axis=1.5,ylab="")
     } else {
         lines(ecdf(best.draw.sims[i,cohort==c]),col=alpha("grey",0.3),verticals=T,pch=NA)
     }
-}
+    
+  }
+        if(my.model<3){
+      mtext(cohort.codes[cohort.codes$Code==c,"Cohort"],3,cex=0.8,padj=0.3,font=2,line=1)
+    } else {
+      mtext(cohort.codes[cohort.codes$Code==c,"Pop"],3,cex=0.8,padj=0.3,font=2,line=1.5)
+mtext(mylabels[cohort.codes[cohort.codes$Code==c,"Fam.type"]],3,cex=0.8,padj=0.3,font=2,line=0.5)
+    }
+
 lines(ecdf(y[cohort==c]),col="red",verticals=T,pch=NA,lwd=2)
 if(c==1){
 legend("topleft",c("observed","simulated",paste0("n=",sum(cohort==c))),col=c("red","grey",NA),lty=c(1,1,NA),cex=1.2,lwd=c(2,1,NA),bg="white")
 }else{
 legend("topleft",paste0("n=",sum(cohort==c)),cex=1.2,bg="white")
 }
-
+ 
 }
+    mtext("number of crossovers",1,outer=T,cex=1.6,padj=0.3)
+    mtext("Fn(x)",2,outer=T,cex=1.6,padj=-0.2)
+    
 dev.off()
 
 pdf(paste(mydir,"/","histograms_of_observed_and_simulated_y_from_highest_lp_estimates.",description,".simulation1.pdf",sep=""),height=5,width=5)
@@ -678,6 +725,7 @@ min_best.draw.sim <- apply(best.draw.sims,1,min)
 test_10pc_90pc_best.draw.sim <-apply(best.draw.sims,1,test_10pc_90pc)
 
 #pdf(paste(mydir,"/","histogram_of_summary_statistics.highest_lp_estimates.",description,".pdf",sep=""),height=10,width=15)
+
 pdf(paste(mydir,"/","histogram_of_summary_statistics.highest_lp_estimates.",description,".pdf",sep=""),height=10,width=10)
 #par(mfrow=c(2,3))
 #par(mfrow=c(2,2))
@@ -686,21 +734,27 @@ par(mar=c(4,6,4,1),mfrow=c(2,2),oma=c(2,1,2,0))
 #abline(v=mean_y,col="red")
 #legend("topright",paste("p=",round(mean(mean_best.draw.sim>=mean(y)),3)),cex=2)
 
-hist(max_best.draw.sim,xlim=range(c(max_y,max_best.draw.sim)),xlab="maximum predicted y",main="Maximum",cex.main=2,cex.axis=1.5,cex.lab=1.5)
+hist(max_best.draw.sim,xlim=range(c(max_y,max_best.draw.sim)),xlab="maximum predicted y",main="Maximum",cex.main=2,cex.axis=1.5,cex.lab=1.5,right=F)
 abline(v=max_y,col="red")
 legend("topright",paste("p=",round(mean(max_best.draw.sim>=max(y)),3)),cex=1.5,bty='n')
 
-hist(min_best.draw.sim,xlim=range(c(min_y,min_best.draw.sim)),xlab="minimum predicted y",main="Minimum",cex.main=2,cex.axis=1.5,cex.lab=1.5)
+hist(min_best.draw.sim,xlim=range(c(min_y,min_best.draw.sim)),xlab="minimum predicted y",main="Minimum",cex.main=2,cex.axis=1.5,cex.lab=1.5,right=F)
 abline(v=min_y,col="red")
 legend("topleft",paste("p=",round(mean(min_best.draw.sim>=min(y)),3)),cex=1.5,bty='n')
 
-
-hist(median_best.draw.sim,xlim=range(c(median_y,median_best.draw.sim)),xlab="median predicted y",main="Median",cex.main=2,cex.axis=1.5,cex.lab=1.5)
+if(length(table(median_best.draw.sim)) > 20){
+  hist(median_best.draw.sim,xlim=range(c(median_y,median_best.draw.sim)),xlab="median predicted y",main="Median",cex.main=2,cex.axis=1.5,cex.lab=1.5,right=F)
+} else {
+  hist(median_best.draw.sim,xlim=range(c(median_y,median_best.draw.sim)),xlab="median predicted y",main="Median",cex.main=2,cex.axis=1.5,cex.lab=1.5,breaks=length(table(median_best.draw.sim)),right=F)
+}
 abline(v=median_y,col="red")
 legend("topright",paste("p=",round(mean(median_best.draw.sim>=median(y)),3)),cex=1.5,bty='n')
 
-
-hist(test_10pc_90pc_best.draw.sim,xlim=range(c(test_10pc_90pc_y,test_10pc_90pc_best.draw.sim)),xlab="|90pc_y - 50pc_y|-|10pc_y - 50pc_y|",main="Asymmetry",cex.main=2,cex.axis=1.5,cex.lab=1.5)
+if(length(table(test_10pc_90pc_best.draw.sim)) > 20){
+  hist(test_10pc_90pc_best.draw.sim,xlim=range(c(test_10pc_90pc_y,test_10pc_90pc_best.draw.sim)),xlab="|90pc_y - 50pc_y|-|10pc_y - 50pc_y|",main="Asymmetry",cex.main=2,cex.axis=1.5,cex.lab=1.5,right=F)
+} else {
+  hist(test_10pc_90pc_best.draw.sim,xlim=range(c(test_10pc_90pc_y,test_10pc_90pc_best.draw.sim)),xlab="|90pc_y - 50pc_y|-|10pc_y - 50pc_y|",main="Asymmetry",cex.main=2,cex.axis=1.5,cex.lab=1.5,breaks=length(table(test_10pc_90pc_best.draw.sim)),right=F)
+}
 abline(v=test_10pc_90pc_y,col="red")
 legend("topleft",paste("p=",round(mean(test_10pc_90pc_best.draw.sim>=test_10pc_90pc_y),3)),cex=1.5,bty='n')
 
@@ -781,14 +835,6 @@ for(x in 1:length(prediction.list)){
 y_predict=prediction.list[[x]]
 classic_residuals=residual.list[[x]]
 description2=mydescriptions[x]
-####plot residuals against age
-cat("plot residuals against age\n")
-
-pdf(paste(mydir,"/","residual_plot_vs_age.",description2,".pdf",sep=""),height=10,width=10)
-par(mar=c(4,6,4,0),oma=c(2,1,2,1))
-plot(Age,classic_residuals,ylab="estimated residual",xlab="Age",main="Estimated residuals vs. age",cex.lab=2,cex.main=2,cex.axis=2)
-abline(h=0,col="red")
-dev.off()
 
 
 ###bin residual plot by predicted value
@@ -811,7 +857,7 @@ dev.off()
 
 ###bin residual plot by predicted value with 95% interval
 cat("bin residual plot by predicted value with 95% interval\n")
-pdf(paste(mydir,"/","binned_residual_plot.",description2,".with_95pc_interval.pdf",sep=""),height=10,width=10)
+pdf(paste(mydir,"/","binned_residual_plot.",description2,".with_95pc_interval.pdf",sep=""),height=10,width=10,useDingbats=F)
 y_predict_sorted=sort(y_predict)
 classic_residuals_sorted=classic_residuals[names(y_predict_sorted)]
 y_predict_binned=rep(NA,20)
@@ -836,10 +882,19 @@ for(i in 1:20){
 }
 dev.off()
 names(Age)=1:length(Age)
+names(cohort) = 1:length(cohort)
+
+####plot residuals against age
+cat("plot residuals against age\n")
+pdf(paste(mydir,"/","residual_plot_vs_age.",description2,".pdf",sep=""),height=10,width=10,useDingbats=F)
+par(mar=c(4,6,4,0),oma=c(2,1,2,1))
+plot(Age,classic_residuals,ylab="estimated residual",xlab="Age",main="Estimated residuals vs. age",cex.lab=2,cex.main=2,cex.axis=2)
+abline(h=0,col="red")
+dev.off()
 
 ####bin residual plot by age
 cat("bin residual plot by age\n")
-pdf(paste(mydir,"/","binned_residual_plot_by_age_with_50pc_interval.",description2,".pdf",sep=""),height=10,width=10)
+pdf(paste(mydir,"/","binned_residual_plot_by_age_with_50pc_interval.",description2,".pdf",sep=""),height=10,width=10,useDingbats=F)
 Age_sorted=sort(Age)
 classic_residuals_sorted=classic_residuals[names(Age_sorted)]
 Age_binned=rep(NA,20)
@@ -869,6 +924,78 @@ par(mar=c(4,6,4,0),oma=c(2,1,2,1))
 plot(Age_binned,range.25th.to.75th,ylab="interquartile range of residuals",xlab="Age,binned",main="Interquartile range of residuals vs. Age",cex.lab=2,cex.main=2,cex.axis=2)
 dev.off()
 
+####plot residuals against age,by cohort
+cat("plot residuals against age by cohort\n")
+if(my.model<3){
+  pdf(paste(mydir,"/","residual_plot_vs_age.",description2,".by_cohort.pdf",sep=""),height=9,width=9,useDingbats=F)
+    par(mar=c(5,4,2,2),mfrow=c(3,3),oma=c(2,2,2,0))
+
+} else {
+  pdf(paste(mydir,"/","residual_plot_vs_age.",description2,".by_cohort.pdf",sep=""),height=12,width=21,useDingbats=F)
+#    par(mar=c(4,6,4,1),mfrow=c(4,7),oma=c(2,1,2,0))
+par(mfrow=c(4,7),oma=c(2,2,2,0),mar=c(5,4,2,2))
+}
+mylabels=c(paste(c("2 generations, >2 children","3 generations, 2 children","2 generations, 2 children"),"both parents",sep=", "),paste(c("2 generations, >2 children","3 generations, 2 children","2 generations, 2 children"),"1 parent",sep=", "))
+names(mylabels)=c("infor.2gen.2parents","infor.3gen.2parents","noninfor.2kids.2gen.2parents","infor.2gen.1parent","infor.3gen.1parent","noninfor.2kids.2gen.1parent")
+
+for(c in 1:length(unique(cohort))){
+if(my.model<3){
+  plot(Age[cohort==c],classic_residuals[cohort==c],ylab="",xlab="",main=cohort.codes[cohort.codes$Code==c,"Cohort"],cex.lab=2,cex.main=2,cex.axis=1.5)
+} else {
+  plot(Age[cohort==c],classic_residuals[cohort==c],ylab="",xlab="",main="",cex.lab=2,cex.main=2,cex.axis=1.5)
+mtext(cohort.codes[cohort.codes$Code==c,"Pop"],3,cex=0.8,padj=0.3,font=2,line=1.5)
+mtext(mylabels[cohort.codes[cohort.codes$Code==c,"Fam.type"]],3,cex=0.8,padj=0.3,font=2,line=0.5)
+  
+}
+    abline(h=0,col="red")
+}
+    mtext("Age",1,outer=T,cex=1.6,padj=0.3)
+    mtext("Estimated residuals",2,outer=T,cex=1.6,padj=-0.2)
+
+dev.off()
+
+####bin residual plot by age, by cohort
+if(FALSE){
+cat("bin residual plot by age, by cohort\n")
+if(my.model<3){
+pdf(paste(mydir,"/","binned_residual_plot_by_age_with_50pc_interval.",description2,".by_cohort.pdf",sep=""),height=9,width=9,useDingbats=F)
+    par(mar=c(4,6,4,1),mfrow=c(3,3),oma=c(2,1,2,0))
+} else {
+  pdf(paste(mydir,"/","binned_residual_plot_by_age_with_50pc_interval.",description2,".by_cohort.pdf",sep=""),height=12,width=21,useDingbats=F)
+    par(mar=c(4,6,4,1),mfrow=c(4,7),oma=c(2,1,2,0))
+    
+}
+for(c in 1:length(unique(cohort))){
+    Age_sorted=sort(Age[cohort==c])
+    classic_residuals_sorted=classic_residuals[names(Age_sorted)]
+    Age_binned=rep(NA,20)
+    classic_residuals_binned=rep(NA,20)
+    increment=round(length(y_predict)/20)
+    c=1
+    for(i in 1:20){
+        Age_binned[i]=mean(Age_sorted[c:min((c+increment),length(y_predict))])
+        classic_residuals_binned[i]=mean(classic_residuals_sorted[c:min((c+increment),length(y_predict))])
+        c=c+increment
+    }
+    par(mar=c(4,6,4,0),oma=c(2,1,2,1))
+    plot(Age_binned,classic_residuals_binned,ylab="Binned estimated residuals",xlab="Age, binned",main=paste0(cohort.codes[cohort.codes$Code==c,"Cohort"]),cex.lab=2,cex.main=2,cex.axis=2,
+         ylim=c(-10,10),xlim=range(Age),col="white")
+    abline(h=0,col="red")
+    c=1
+    range.25th.to.75th = c()
+    for(i in 1:20){
+        my.repictions=Age_sorted[c:min((c+increment),length(y_predict))]
+        myresiduals=classic_residuals_sorted[c:min((c+increment),length(y_predict))]
+        range.25th.to.75th =c(range.25th.to.75th ,quantile(myresiduals,0.75)-quantile(myresiduals,0.25))
+        segments(Age_binned[i],quantile(myresiduals,0.25),Age_binned[i],quantile(myresiduals,0.75))
+        segments(quantile(my.repictions,0.25),classic_residuals_binned[i],quantile(my.repictions,0.75),classic_residuals_binned[i])
+        c=c+increment
+    }
+}
+par(mar=c(4,6,4,0),oma=c(2,1,2,1))
+plot(Age_binned,range.25th.to.75th,y=paste0(cohort.codes[cohort.codes$Code==c,"Cohort"]),xlab="Age,binned",main="Interquartile range of residuals vs. Age",cex.lab=2,cex.main=2,cex.axis=2)
+dev.off()
+}
 
 ####plot residuals against predicted values
 cat("plot residuals against predicted values\n")
@@ -880,7 +1007,7 @@ dev.off()
 
 ###Distribution of residuals - density and qq plot
 cat("Distribution of residuals - density and qq plot\n")
-pdf(paste(mydir,"/","distribution_of_residuals.",description2,".pdf",sep=""),height=5,width=10)
+pdf(paste(mydir,"/","distribution_of_residuals.",description2,".pdf",sep=""),height=5,width=10,useDingbats=F)
 par(mar=c(4,6,4,0),oma=c(2,1,2,1),mfrow=c(1,2))
 
 #density
@@ -915,10 +1042,10 @@ dev.off()
 ###Distribution of residuals - density and qq plot, by cohort
 cat("Distribution of residuals - density and qq plot, by cohort\n")
 if(my.model<3){
-    pdf(paste(mydir,"/","distribution_of_residuals.by_cohort.",description2,".pdf",sep=""),height=5*ceiling(max(cohort)/2),width=20)
+    pdf(paste(mydir,"/","distribution_of_residuals.by_cohort.",description2,".pdf",sep=""),height=5*ceiling(max(cohort)/2),width=20,useDingbats=F)
     par(mfrow=c(ceiling(max(cohort)/2),4),mar=c(4,6,4,1),oma=c(2,1,2,0))
 } else {
-    pdf(paste(mydir,"/","distribution_of_residuals.by_cohort.",description2,".pdf",sep=""),height=5*ceiling(max(cohort)/2),width=20)
+    pdf(paste(mydir,"/","distribution_of_residuals.by_cohort.",description2,".pdf",sep=""),height=5*ceiling(max(cohort)/2),width=20,useDingbats=F)
         par(mfrow=c(ceiling(max(cohort)/2),4),mar=c(4,6,4,1),oma=c(2,1,2,0))
 }
 for(c in 1:length(unique(cohort))){

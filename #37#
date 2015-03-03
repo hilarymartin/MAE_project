@@ -1,0 +1,8 @@
+  sigmasq_alpha_prior = 6
+  sigmasq_m_alpha = 5
+  sigmasq_m_beta = 5
+  data1.mat2$sigmasq_m_alpha = sigmasq_m_alpha
+  data1.mat2$sigmasq_m_beta = sigmasq_m_beta
+  data1.mat2$mean_alpha_prior = mu_alpha_prior
+  data1.mat2$sigmasq_alpha_prior = sigmasq_alpha_prior
+

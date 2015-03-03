@@ -1,0 +1,26 @@
+use warnings;
+use strict;
+
+open(MAP1,$ARGV[0]);
+open(MAP2,$ARGV[1]);
+open(OUT,">".$ARGV[2]);
+open(ERROR,">".$ARGV[3]);
+my %map1
+while(<MAP1>){
+    chomp $_;
+    my @b = split("\t",$_);
+    $map1{$b[1]} = $b[3];
+}
+while(<MAP2>){
+    chomp $_;
+    my @b = split("\t",$_);
+    if(exists $map1{$b[1]}){
+	if($map1{$b[1]} == $b[3]){
+	    print OUT $b[1],"\n";
+	} else {
+	    print ERROR $b[1],"\t",$map1{$b[1]},"\t",$b[3],"\tDIFFERENT_COORDINATE\n";
+	}
+    }else {
+	print ERROR $b[1],"\tDOES_NOT_EXISTS\n";
+    }
+}

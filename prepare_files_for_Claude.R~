@@ -1,0 +1,38 @@
+files.to.open=read.delim("files_for_Claude.txt",header=F,stringsAsFactors=F)[,1]
+names(files.to.open) = c("CARL","FC","FVG","GPC","NTR","ORCADES","QTR370","QTR610","VB","KORCULA","VIS")
+
+load("duoHMM_data_for_RSTAN.more_stringent.RData")
+
+all.data = NULL
+for(f in 1:length(files.to.open)){
+data = read.delim(files.to.open[f],header=T,stringsAsFactors=F)
+data$cohort=names(files.to.open)[f]
+all.data=rbind(all.data,data)
+}
+
+keep= all.data[all.data$informative.2gen.2parents,]
+
+
+
+parents=unique(keep[,c("CHILD","PARENT","cohort")])
+parent.count=table(parents$PARENT)
+
+parents$duo=paste0(parents$CHILD,"-",parents$PARENT)
+
+parents[!parents$duo %in% data0$duo,]
+
+removed=read.delim("samples_removed_due_to_missing_or_suspicious_age_data.more_stringent.generr_removed.recombination_count.p_0.5.annotated.double_xovers_within_X_SNPs_removed.txt",header=T,stringsAsFactors=F)
+
+#these were all removed because they have no/suspicious age data, but this doesn't matter for Claude
+
+#all.data[all.data$PARENT %in% names(parent.count[parent.count<3]),]
+
+keep2 = keep[!keep$PARENT %in% names(parent.count[parent.count<3]) ,c("CHILD","PARENT","chr","START","END","PROB_RECOMBINATION","sex","cohort")]
+
+parents2=unique(keep2[,c("CHILD","PARENT","cohort","duo")])
+
+
+write.table(keep2,"all_cohorts.more_stringent.generr_removed.recombinations.p_0.5.annotated.double_xovers_within_X_SNPs_removed.for_Claude.txt",quote=F,sep="\t")
+
+
+#

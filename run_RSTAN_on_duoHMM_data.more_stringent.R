@@ -136,6 +136,7 @@ beta.parameters=read.delim("parameters_for_beta_distribution.model3_maternal.mor
 
 }
 
+
 if(argv[1] ==28){
     cat("Model 3.2 paternal, with adjusted priors\n")
 if(!print.only){
@@ -579,6 +580,8 @@ if(!print.only){
      load(paste0("/well/donnelly/hilary/maternal_age_and_recombination/RSTAN_output_on_duoHMM_more_stringent/RSTAN.modell1.6.2.all_chains.pat.including_alpha.mu_m_N_",mean_alpha_prior,"_",sigmasq_mu_m_prior,".sigmasq_m_IG_",sigmasq_m_alpha,"_",sigmasq_m_beta,".RData"))
  }
      mysim<-extract(model1.6.pat,permuted=T)
+mysim.model1.pat.with.gpc=mysim
+     sum(mysim.model1.pat.with.gpc$beta_Age>0)/length(mysim.model1.pat.with.gpc$beta_Age)
     cohort.codes=read.delim("RSTAN_output/key_for_paternal_cohorts_to_include_in_model_1.more_stringent.txt",header=T)
     myname="paternal"
 }
@@ -939,7 +942,6 @@ if(!print.only){
     my.ylim=100
     plot(density(mysim$beta_Age),xlim=range(mysim$beta_Age),xlab="beta_Age",main="Posterior for beta_Age",lwd=2)
     abline(v=0,lwd=2)
-    #    if(argv[1] %in% c(47,48,55,56,57,58,59,60,61,62)){
     if(argv[1] %in% c(57,58,59,60,61,62)){
         curve(dnorm(x,0,1),add=T,lwd=2,lty=2)
         legend("topleft",c("posterior","prior"),lty=c(1,2),lwd=2)
@@ -1693,4 +1695,265 @@ pdf(paste0("RSTAN_output_on_duoHMM_more_stringent/",myname,".posteriors.beta_Age
     legend("topright",c("posterior","prior"),lty=c(1,2),lwd=2)
     dev.off()
 }
+
+
+####model 3.2
+if(FALSE){
+if(argv[1] %in% c(77,78)){
+
+if(argv[1] ==77){
+cat("Model 3.2 maternal, with adjusted priors\n")
+if(!print.only){
+data2.mat2$mu_alpha_prior= 3.7
+data2.mat2$sigmasq_alpha_prior = 0.2
+    model3.2.mat.compiled = stan(file = "/well/donnelly/hilary/maternal_age_and_recombination/bin/RSTAN.model3.2.adjusted_priors.different_link.stan",data=data2.mat2,iter=10,chains=0,pars=c("beta_Age","p_by_cohort","omega","mu_m","sigmasq_m","exp_a0"))
+model3.2.mat.list <- mclapply(1:4, mc.cores = 4,function(i) stan(fit = model3.2.mat.compiled, data = data2.mat2,chains = 1, chain_id = i,iter=10000,pars=c("beta_Age","p_by_cohort","omega","mu_m","sigmasq_m","exp_a0")))
+model3.2.mat <- sflist2stanfit(model3.2.mat.list)
+save(model3.2.mat,file=paste0("/well/donnelly/hilary/maternal_age_and_recombination/RSTAN_output_on_duoHMM_more_stringent/RSTAN.model3.2.adjusted_priors.different_link.all_chains.mat.including_alpha.RData"))
+print(model3.2.mat,pars=c("beta_Age","p_by_cohort","mu_m","sigmasq_m","omega"),digits=4)
+} else {
+load("/well/donnelly/hilary/maternal_age_and_recombination/RSTAN_output_on_duoHMM_more_stringent/RSTAN.model3.2.adjusted_priors.different_link.all_chains.mat.including_alpha.RData")
+print(model3.2.mat,pars=c("beta_Age","p_by_cohort","mu_m","sigmasq_m","omega"),digits=4)
+}
+
+mysim<-extract(model3.2.mat,permuted=T)
+parent="adjusted_priors.maternal"
+cohort.codes=read.delim("RSTAN_output/key_for_maternal_cohorts_to_include_in_model_3.more_stringent.txt",header=T,stringsAsFactors=F)
+beta.parameters=read.delim("parameters_for_beta_distribution.model3_maternal.more_stringent.txt",header=T)[,1:5]
+
+}
+
+if(argv[1] ==78){
+    cat("Model 3.2 paternal, with adjusted priors\n")
+if(!print.only){
+data2.pat2$mu_alpha_prior= 3.3
+data2.pat2$sigmasq_alpha_prior = 0.2
+    model3.2.pat.compiled = stan(file = "/well/donnelly/hilary/maternal_age_and_recombination/bin/RSTAN.model3.2.adjusted_priors.different_link.stan",data=data2.pat2,iter=10,chains=0,pars=c("beta_Age","p_by_cohort","omega","mu_m","sigmasq_m","exp_a0"))
+    model3.2.pat.list <- mclapply(1:4, mc.cores = 4,function(i) stan(fit = model3.2.pat.compiled, data = data2.pat2,chains = 1, chain_id = i,iter=10000,pars=c("beta_Age","p_by_cohort","omega","mu_m","sigmasq_m","exp_a0")))
+    model3.2.pat <- sflist2stanfit(model3.2.pat.list)
+    save(model3.2.pat,file=paste0("/well/donnelly/hilary/maternal_age_and_recombination/RSTAN_output_on_duoHMM_more_stringent/RSTAN.model3.2.adjusted_priors.different_link.all_chains.pat.including_alpha.RData"))
+    print(model3.2.pat,pars=c("beta_Age","p_by_cohort","mu_m","sigmasq_m","omega"),digits=4)
+} else {
+    load("/well/donnelly/hilary/maternal_age_and_recombination/RSTAN_output_on_duoHMM_more_stringent/RSTAN.model3.2.adjusted_priors.different_link.all_chains.pat.including_alpha.RData")
+}
+    mysim<-extract(model3.2.pat,permuted=T)
+    parent="adjusted_priors.paternal"
+    cohort.codes=read.delim("RSTAN_output/key_for_paternal_cohorts_to_include_in_model_3.more_stringent.txt",header=T,stringsAsFactors=F)
+    beta.parameters=read.delim("parameters_for_beta_distribution.model3_paternal.more_stringent.txt",header=T)[,1:5]
+}
+    cohort.codes=cohort.codes[order(cohort.codes[,1]),]
+    cohort.codes$Pop=unlist(lapply(strsplit(cohort.codes$Cohort,".",fixed=T),function(x){return(x[[1]])}))
+    cohort.codes$Fam.type=sapply(1:nrow(cohort.codes),function(x){gsub(paste0(cohort.codes$Pop[x],"."),"",cohort.codes$Cohort[x])})
+    beta.parameters=beta.parameters[order(beta.parameters$Cohort.type),]
+    mylty=c(1,2,4,1,2,4)
+    names(mylty)=c("infor.2gen.2parents","infor.3gen.2parents","noninfor.2kids.2gen.2parents","infor.2gen.1parent","infor.3gen.1parent","noninfor.2kids.2gen.1parent")
+    mytype=c("l","l","l","b","b","b")
+    names(mytype)=c("infor.2gen.2parents","infor.3gen.2parents","noninfor.2kids.2gen.2parents","infor.2gen.1parent","infor.3gen.1parent","noninfor.2kids.2gen.1parent")
+    mylwd=c(2,2,2,1,1,1)
+    names(mylwd)=c("infor.2gen.2parents","infor.3gen.2parents","noninfor.2kids.2gen.2parents","infor.2gen.1parent","infor.3gen.1parent","noninfor.2kids.2gen.1parent")
+        mypch=c(NA,NA,NA,19,19,19)
+    names(mypch)=c("infor.2gen.2parents","infor.3gen.2parents","noninfor.2kids.2gen.2parents","infor.2gen.1parent","infor.3gen.1parent","noninfor.2kids.2gen.1parent")
+ pdf(paste0("RSTAN_output_on_duoHMM_more_stringent/model3.2.different_link.",parent,".posteriors.all_parameters.pdf"),height=8*3,width=4*3)
+par(mfrow=c(8,4))
+
+    plot(density(mysim$beta_Age),xlab="beta_Age",main="Posterior for beta_Age")
+    curve(dnorm(x,0,sqrt(0.05)),lwd=2,lty=2,add=T)
+    legend("topright",c("posterior","prior"),lty=c(1,2),lwd=2)
+    abline(v=0,lwd=2)
+
+plot(density(mysim$sigmasq_m),xlab="sigmasq_m",main="Posterior for sigmasq_m",lwd=2)
+lines(density(rigamma(10000,10,2)),lty=2,lwd=2)
+legend("topright",c("posterior","prior"),lwd=2,lty=c(1,2))
+
+plot(density(mysim$omega),main="Posterior for omega",lwd=2,xlab="omega")
+    lines(1/seq(from=0,to=1,by=0.01),seq(from=0,to=1,by=0.01),type="l",lty=2,lwd=2)
+    legend("topright",c("posterior","prior"),lwd=2,lty=c(1,2))
+
+plot(density(mysim$mu_m),main="Posterior for mu_m",lwd=2,xlab="mu_m")
+    curve(dnorm(x,3.7,sqrt(0.2)),lwd=2,lty=2,add=T)
+    legend("topright",c("posterior","prior"),lwd=2,lty=c(1,2))
+
+mylabels=c(paste(c("informative, 2 generations","informative, 3 generations","uninformative, 2 kids"),"both parents",sep=", "),paste(c("informative, 2 generations","informative, 3 generations","uninformative, 2 kids"),"1 parent",sep=", "))
+names(mylabels)=c("infor.2gen.2parents","infor.3gen.2parents","noninfor.2kids.2gen.2parents","infor.2gen.1parent","infor.3gen.1parent","noninfor.2kids.2gen.1parent")
+
+for(i in 1:ncol(mysim$p_by_cohort)){
+        sample.size= sum(data2.mat$cohort.family.type==cohort.codes[cohort.codes[,1]==i,"Cohort"])
+        plot(density(mysim$p_by_cohort[,i]),xlab="p",xlim=c(0,1),main=paste0(cohort.codes[cohort.codes[,1]==i,"Pop"],", ",mylabels[cohort.codes[cohort.codes[,1]==i,"Fam.type"]]),lwd=2)
+        curve(dbeta(x,beta.parameters[beta.parameters$Cohort.type==i,"alpha"],beta.parameters[beta.parameters$Cohort.type==i,"beta"]),add=T,lty=2,lwd=2)
+        abline(v=beta.parameters[beta.parameters$Cohort.type==i,"mean.relative.to.all.informative"],lwd=1,lty=2,col="blue")
+        legend("topleft",c("posterior","prior","p_observed",paste0("n = ",sample.size)),col=c("black","black","blue",NA),lty=c(1,2,2,NA),lwd=c(2,2,1,NA))
+    }
+    dev.off()
+}
+}
+#argv[1]=as.numeric(argv[1])
+#print(argv[1])
+#print(class(argv[1]))
+#print(argv)
+#if(argv[1]==25|argv[1]==26){
+#if(argv[1]==78){# %in% c("79","80","81","82","83","84","85","86")){
+if(argv[1] %in% c(79:86)){
+
+print(argv[1])
+
+
+if(argv[1] %in% c(79,81,83,85)){
+cat("Model 3.2 maternal, with adjusted priors\n")
+
+  mu_alpha_prior = 37
+  sigmasq_alpha_prior = 6
+  sigmasq_m_alpha = 5
+  sigmasq_m_beta = 5
+  data2.mat2$sigmasq_m_alpha = sigmasq_m_alpha
+  data2.mat2$sigmasq_m_beta = sigmasq_m_beta
+  data2.mat2$mu_alpha_prior = mu_alpha_prior
+  data2.mat2$sigmasq_alpha_prior = sigmasq_alpha_prior
+
+
+if(argv[1] == 79){
+  stan.code  = "/well/donnelly/hilary/maternal_age_and_recombination/bin/RSTAN.model3.2.uniform_prior_on_beta_Age.stan"
+  name="uniform_prior_on_beta_Age.maternal"
+
+}
+
+if(argv[1] == 81){
+  stan.code  = "/well/donnelly/hilary/maternal_age_and_recombination/bin/RSTAN.model3.2.uniform_prior_on_sigma_m.stan"
+  name="uniform_prior_on_sigma_m.maternal"
+}
+
+
+if(argv[1] == 83){
+
+  stan.code  = "/well/donnelly/hilary/maternal_age_and_recombination/bin/RSTAN.model3.2.uniform_prior_on_mu_m.stan"
+  name="uniform_prior_on_mu_m.maternal"
+}
+
+
+if(argv[1] == 85){
+  stan.code  = "/well/donnelly/hilary/maternal_age_and_recombination/bin/RSTAN.model3.2.uniform_prior_on_p.stan"
+  name="uniform_prior_on_p.maternal"
+}
+
+if(!print.only){
+model3.2.mat.compiled = stan(file = stan.code,data=data2.mat2,iter=10,chains=0,pars=c("beta_Age","p_by_cohort","omega","mu_m","sigmasq_m","exp_a0"))
+model3.2.mat.list <- mclapply(1:4, mc.cores = 4,function(i) stan(fit = model3.2.mat.compiled, data = data2.mat2,chains = 1, chain_id = i,iter=10000,pars=c("beta_Age","p_by_cohort","omega","mu_m","sigmasq_m","exp_a0")))
+model3.2.mat <- sflist2stanfit(model3.2.mat.list)
+save(model3.2.mat,file=paste0("/well/donnelly/hilary/maternal_age_and_recombination/RSTAN_output_on_duoHMM_more_stringent/RSTAN.model3.2.",name,".RData"))
+print(model3.2.mat,pars=c("beta_Age","p_by_cohort","mu_m","sigmasq_m","omega"),digits=4)
+} else {
+load(paste0("/well/donnelly/hilary/maternal_age_and_recombination/RSTAN_output_on_duoHMM_more_stringent/RSTAN.model3.2.",name,".RData"))
+print(model3.2.mat,pars=c("beta_Age","p_by_cohort","mu_m","sigmasq_m","omega"),digits=4)
+}
+mysim<-extract(model3.2.mat,permuted=T)
+parent="adjusted_priors.maternal"
+cohort.codes=read.delim("RSTAN_output/key_for_maternal_cohorts_to_include_in_model_3.more_stringent.txt",header=T,stringsAsFactors=F)
+beta.parameters=read.delim("parameters_for_beta_distribution.model3_maternal.more_stringent.txt",header=T)[,1:5]
+}else {
+    cat("Model 3.2 paternal, with adjusted priors\n")
+  mu_alpha_prior = 32
+  sigmasq_alpha_prior = 6
+  sigmasq_m_alpha = 5
+  sigmasq_m_beta = 5
+  data2.pat2$sigmasq_m_alpha = sigmasq_m_alpha
+  data2.pat2$sigmasq_m_beta = sigmasq_m_beta
+  data2.pat2$mu_alpha_prior = mu_alpha_prior
+  data2.pat2$sigmasq_alpha_prior = sigmasq_alpha_prior
+
+
+if(argv[1] == 80){
+  stan.code  = "/well/donnelly/hilary/maternal_age_and_recombination/bin/RSTAN.model3.2.uniform_prior_on_beta_Age.stan"
+  name="uniform_prior_on_beta_Age.paternal"
+
+}
+
+if(argv[1] == 82){
+  stan.code  = "/well/donnelly/hilary/maternal_age_and_recombination/bin/RSTAN.model3.2.uniform_prior_on_sigma_m.stan"
+  name="uniform_prior_on_sigma_m.paternal"
+}
+
+
+if(argv[1] == 84){
+
+  stan.code  = "/well/donnelly/hilary/maternal_age_and_recombination/bin/RSTAN.model3.2.uniform_prior_on_mu_m.stan"
+  name="uniform_prior_on_mu_m.paternal"
+}
+
+
+if(argv[1] == 86){
+  stan.code  = "/well/donnelly/hilary/maternal_age_and_recombination/bin/RSTAN.model3.2.uniform_prior_on_p.stan"
+  name="uniform_prior_on_p.paternal"
+}
+
+if(!print.only){
+    model3.2.pat.compiled = stan(file = stan.code,data=data2.pat2,iter=10,chains=0,pars=c("beta_Age","p_by_cohort","omega","mu_m","sigmasq_m","exp_a0"))
+    model3.2.pat.list <- mclapply(1:4, mc.cores = 4,function(i) stan(fit = model3.2.pat.compiled, data = data2.pat2,chains = 1, chain_id = i,iter=10000,pars=c("beta_Age","p_by_cohort","omega","mu_m","sigmasq_m","exp_a0")))
+    model3.2.pat <- sflist2stanfit(model3.2.pat.list)
+    save(model3.2.pat,file=paste0("/well/donnelly/hilary/maternal_age_and_recombination/RSTAN_output_on_duoHMM_more_stringent/RSTAN.model3.2.",name,".RData"))
+    print(model3.2.pat,pars=c("beta_Age","p_by_cohort","mu_m","sigmasq_m","omega"),digits=4)
+} else {
+    load(paste0("/well/donnelly/hilary/maternal_age_and_recombination/RSTAN_output_on_duoHMM_more_stringent/RSTAN.model3.2.",name,".RData"))
+}
+    mysim<-extract(model3.2.pat,permuted=T)
+    parent="adjusted_priors.paternal"
+    cohort.codes=read.delim("RSTAN_output/key_for_paternal_cohorts_to_include_in_model_3.more_stringent.txt",header=T,stringsAsFactors=F)
+    beta.parameters=read.delim("parameters_for_beta_distribution.model3_paternal.more_stringent.txt",header=T)[,1:5]
+}
+    cohort.codes=cohort.codes[order(cohort.codes[,1]),]
+    cohort.codes$Pop=unlist(lapply(strsplit(cohort.codes$Cohort,".",fixed=T),function(x){return(x[[1]])}))
+    cohort.codes$Fam.type=sapply(1:nrow(cohort.codes),function(x){gsub(paste0(cohort.codes$Pop[x],"."),"",cohort.codes$Cohort[x])})
+    beta.parameters=beta.parameters[order(beta.parameters$Cohort.type),]
+    mylty=c(1,2,4,1,2,4)
+    names(mylty)=c("infor.2gen.2parents","infor.3gen.2parents","noninfor.2kids.2gen.2parents","infor.2gen.1parent","infor.3gen.1parent","noninfor.2kids.2gen.1parent")
+    mytype=c("l","l","l","b","b","b")
+    names(mytype)=c("infor.2gen.2parents","infor.3gen.2parents","noninfor.2kids.2gen.2parents","infor.2gen.1parent","infor.3gen.1parent","noninfor.2kids.2gen.1parent")
+    mylwd=c(2,2,2,1,1,1)
+    names(mylwd)=c("infor.2gen.2parents","infor.3gen.2parents","noninfor.2kids.2gen.2parents","infor.2gen.1parent","infor.3gen.1parent","noninfor.2kids.2gen.1parent")
+        mypch=c(NA,NA,NA,19,19,19)
+    names(mypch)=c("infor.2gen.2parents","infor.3gen.2parents","noninfor.2kids.2gen.2parents","infor.2gen.1parent","infor.3gen.1parent","noninfor.2kids.2gen.1parent")
+
+
+ pdf(paste0("RSTAN_output_on_duoHMM_more_stringent/model3.2.",name,".posteriors.all_parameters.pdf"),height=8*3,width=4*3)
+par(mfrow=c(8,4))
+
+    plot(density(mysim$beta_Age),xlab="beta_Age",main="Posterior for beta_Age")
+if(!argv[1] %in% c(79:80)){
+  curve(dnorm(x,0,sqrt(0.05)),lwd=2,lty=2,add=T)
+}
+   legend("topright",c("posterior","prior"),lty=c(1,2),lwd=2)
+   abline(v=0,lwd=2)
+   plot(density(mysim$sigmasq_m),xlab="sigmasq_m",main="Posterior for sigmasq_m",lwd=2)
+   if(!argv[1] %in% c(81:82)){
+     lines(density(rigamma(10000,5,5)),lty=2,lwd=2)
+   }
+      legend("topright",c("posterior","prior"),lwd=2,lty=c(1,2))
+      
+      plot(density(mysim$omega),main="Posterior for omega",lwd=2,xlab="omega")
+      lines(1/seq(from=0,to=1,by=0.01),seq(from=0,to=1,by=0.01),type="l",lty=2,lwd=2)
+      legend("topright",c("posterior","prior"),lwd=2,lty=c(1,2))
+      
+      plot(density(mysim$mu_m),main="Posterior for mu_m",lwd=2,xlab="mu_m")
+      if(!argv[1] %in% c(83:84)){
+        curve(dnorm(x,36,sqrt(6 )),lwd=2,lty=2,add=T)
+ }
+   legend("topright",c("posterior","prior"),lwd=2,lty=c(1,2))
+   mylabels=c(paste(c("informative, 2 generations","informative, 3 generations","uninformative, 2 kids"),"both parents",sep=", "),paste(c("informative, 2 generations","informative, 3 generations","uninformative, 2 kids"),"1 parent",sep=", "))
+   names(mylabels)=c("infor.2gen.2parents","infor.3gen.2parents","noninfor.2kids.2gen.2parents","infor.2gen.1parent","infor.3gen.1parent","noninfor.2kids.2gen.1parent")
+
+   
+   for(i in 1:ncol(mysim$p_by_cohort)){
+     sample.size= sum(data2.mat$cohort.family.type==cohort.codes[cohort.codes[,1]==i,"Cohort"])
+        plot(density(mysim$p_by_cohort[,i]),xlab="p",xlim=c(0,1),main=paste0(cohort.codes[cohort.codes[,1]==i,"Pop"],", ",mylabels[cohort.codes[cohort.codes[,1]==i,"Fam.type"]]),lwd=2)
+      if(!argv[1] %in% c(85:86)){
+        curve(dbeta(x,beta.parameters[beta.parameters$Cohort.type==i,"alpha"],beta.parameters[beta.parameters$Cohort.type==i,"beta"]),add=T,lty=2,lwd=2)
+}
+        abline(v=beta.parameters[beta.parameters$Cohort.type==i,"mean.relative.to.all.informative"],lwd=1,lty=2,col="blue")
+        legend("topleft",c("posterior","prior","p_observed",paste0("n = ",sample.size)),col=c("black","black","blue",NA),lty=c(1,2,2,NA),lwd=c(2,2,1,NA))
+    }
+    dev.off()
+}
+
+
+    
+
+ 
 

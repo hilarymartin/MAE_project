@@ -118,8 +118,19 @@ lines(rigamma(niterations,3,0.1),lty=2,lwd=2)
 
 if(argv[1] %in% c(27,28)){
 
+  
 if(argv[1] ==27){
 cat("Model 3.2 maternal, with adjusted priors\n")
+  mu_alpha_prior = 37
+  sigmasq_alpha_prior = 6
+  sigmasq_m_alpha = 5
+  sigmasq_m_beta = 5
+  data2.mat2$sigmasq_m_alpha = sigmasq_m_alpha
+  data2.mat2$sigmasq_m_beta = sigmasq_m_beta
+  data2.mat2$mean_alpha_prior = mu_alpha_prior
+  data2.mat2$sigmasq_alpha_prior = sigmasq_alpha_prior
+
+
 if(!print.only){
 model3.2.mat.compiled = stan(file = "/well/donnelly/hilary/maternal_age_and_recombination/bin/RSTAN.model3.2.adjusted_priors.stan",data=data2.mat2,iter=10,chains=0,pars=c("beta_Age","p_by_cohort","omega","mu_m","sigmasq_m","exp_a0"))
 model3.2.mat.list <- mclapply(1:4, mc.cores = 4,function(i) stan(fit = model3.2.mat.compiled, data = data2.mat2,chains = 1, chain_id = i,iter=niterations,pars=c("beta_Age","p_by_cohort","omega","mu_m","sigmasq_m","exp_a0")))
@@ -139,6 +150,14 @@ beta.parameters=read.delim("parameters_for_beta_distribution.model3_maternal.mor
 
 if(argv[1] ==28){
     cat("Model 3.2 paternal, with adjusted priors\n")
+  mu_alpha_prior = 32
+  sigmasq_alpha_prior = 6
+  sigmasq_m_alpha = 5
+  sigmasq_m_beta = 5
+  data2.pat2$sigmasq_m_alpha = sigmasq_m_alpha
+  data2.pat2$sigmasq_m_beta = sigmasq_m_beta
+  data2.pat2$mean_alpha_prior = mu_alpha_prior
+  data2.pat2$sigmasq_alpha_prior = sigmasq_alpha_prior
 if(!print.only){
     model3.2.pat.compiled = stan(file = "/well/donnelly/hilary/maternal_age_and_recombination/bin/RSTAN.model3.2.adjusted_priors.stan",data=data2.pat2,iter=10,chains=0,pars=c("beta_Age","p_by_cohort","omega","mu_m","sigmasq_m","exp_a0"))
     model3.2.pat.list <- mclapply(1:4, mc.cores = 4,function(i) stan(fit = model3.2.pat.compiled, data = data2.pat2,chains = 1, chain_id = i,iter=niterations,pars=c("beta_Age","p_by_cohort","omega","mu_m","sigmasq_m","exp_a0")))
@@ -728,11 +747,14 @@ if(!print.only){
     model1.6.pat.list = mclapply(1:4, mc.cores = 4,function(i) stan(fit = model1.6.pat.compiled, data = data1.pat2,chains = 1, chain_id = i,iter=niterations,pars=c("beta_Age","tausq","mu_m","sigmasq_m","a0")))
     model1.6.pat <- sflist2stanfit(model1.6.pat.list)
     print(model1.6.pat,pars=c("beta_Age","tausq","sigmasq_m","mu_m"),digits=4)
-     save(model1.6.pat,file=paste0("/well/donnelly/hilary/maternal_age_and_recombination/RSTAN_output_on_duoHMM_more_stringent/longer_chains/RSTAN.modell1.6.2.all_chains.pat.including_alpha.mu_m_N_",mean_alpha_prior,"_",sigmasq_mu_m_prior,".sigmasq_m_IG_",sigmasq_m_alpha,"_",sigmasq_m_beta,".RData"))
+     save(model1.6.pat,file=paste0("/well/donnelly/hilary/maternal_age_and_recombination/RSTAN_output_on_duoHMM_more_stringent/longer_chains/RSTAN.modell1.6.2.all_chains.pat.including_alpha.mu_m_N_",mean_alpha_prior,"_",sigmasq_mu_m_prior,".sigmasq_m_IG_",
+                         sigmasq_m_alpha,"_",sigmasq_m_beta,".RData"))
 } else {
-     load(paste0("/well/donnelly/hilary/maternal_age_and_recombination/RSTAN_output_on_duoHMM_more_stringent/longer_chains/RSTAN.modell1.6.2.all_chains.pat.including_alpha.mu_m_N_",mean_alpha_prior,"_",sigmasq_mu_m_prior,".sigmasq_m_IG_",sigmasq_m_alpha,"_",sigmasq_m_beta,".RData"))
+     load(paste0("/well/donnelly/hilary/maternal_age_and_recombination/RSTAN_output_on_duoHMM_more_stringent/longer_chains/RSTAN.modell1.6.2.all_chains.pat.including_alpha.mu_m_N_",mean_alpha_prior,"_",sigmasq_mu_m_prior,".sigmasq_m_IG_",sigmasq_m_alpha,"_",
+                 sigmasq_m_beta,".RData"))
  }
      mysim<-extract(model1.6.pat,permuted=T)
+
     cohort.codes=read.delim("RSTAN_output/key_for_paternal_cohorts_to_include_in_model_1.more_stringent.txt",header=T)
     myname="paternal"
 }

@@ -9,8 +9,9 @@ data {
     int cohort[J];//which cohort
     real mean_alpha_prior;	
     real<lower=0> sigmasq_alpha_prior;
-    int<lower=0> sigmasq_m_alpha;
-    int<lower=0> sigmasq_m_beta;	
+    real<lower=0> sigmasq_m_alpha;
+    real<lower=0> sigmasq_m_beta;	
+   
    }
   parameters {
     vector[I] exp_a0; // random effect of mothers
@@ -32,8 +33,6 @@ data {
     }
   }
   model {
-
-
   //Priors
     beta_global ~ normal(0,0.01);///smaller variance since the age effect is now multiplicative: baseline * exp(0.1* beta_Age * age)
     sigmasq_global ~ inv_gamma(3,0.02);///smaller variance since the age effect is now multiplicative: baseline * exp(0.1* beta_Age * age)

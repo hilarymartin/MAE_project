@@ -63,7 +63,6 @@ conf.int.upper=alpha.grid[conf.interval[length(conf.interval)]]
 overlap.stats=rbind(overlap.stats,c(nrow(duoHMM.resolved),nrow(duoHMM.resolved)/nrow(duoHMM.all),total.true.overlapping,prop.true.overlapping,mean.prop.overlapping,actual.prop.in.hotspots,MLE.alpha,conf.int.lower,conf.int.upper))
 }
 
-
 overlap.stats=data.frame(overlap.stats)
 colnames(overlap.stats)=c("n.crossovers","prop.all.crossovers","n.overlapping.hotspots","prop.overlapping.hotspots","prop.overlapping.hotspots.by.chance","alpha.30kb.Bleazard","alpha.30kb.Coop","alpha.30kb.Coop.95pc.lower","alpha.30kb.Coop.95pc.upper")
 #overlap.stats$resolution=c("all","100kb","50kb","30kb","20kb","10kb","5kb")

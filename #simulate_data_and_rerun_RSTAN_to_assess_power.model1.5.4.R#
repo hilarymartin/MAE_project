@@ -1,0 +1,190 @@
+library(rstan)
+library(parallel)
+
+description="model1.5.4.maternal.sigmasq_m_IG_3_0.01"
+mydir="RSTAN_output_on_duoHMM_more_stringent/with_new_QTR.no_GPC_different_link_for_NB_changing_sigmasq_m_prior/model1.54"
+
+#first prepare data for input
+
+#    load("/well/donnelly/hilary/maternal_age_and_recombination/RSTAN_output_on_duoHMM_more_stringent/longer_chains/RSTAN.modell1.5.4.all_chains.mat.including_alpha.sigmasq_m_IG_5_5.RData")
+    load("/well/donnelly/hilary/maternal_age_and_recombination/RSTAN_output_on_duoHMM_more_stringent/with_new_QTR.no_GPC_different_link_for_NB_changing_sigmasq_m_prior/RSTAN.modell1.5.4.all_chains.mat.including_alpha.sigmasq_m_IG_3_0.01.RData")
+
+    mysim<-extract(model1.5.mat,permuted=T)
+#-0.02874639  0.04003923
+            mybins=c(min(mysim$beta_Age),seq(from=0,to=0.004,by=0.0005),max(mysim$beta_Age))
+#            mybins=c(-0.02874639,seq(from=-0.002,to=0.03,by=0.004), 0.04003923    )
+    n.in.bins=c()
+    for(i in 1:(length(mybins)-1)){
+        n.in.bins=c(n.in.bins,sum(mysim$beta_Age > mybins[i] & mysim$beta_Age <=mybins[i+1]))
+    }
+if(FALSE){
+    mysim$bin.beta.age = 0
+    mysim$bin.beta.age[mysim$beta_Age <=0] = -1
+    samples.by.bin = list()
+    for(i in 1:(length(mybins)-1)){
+        mysim$bin.beta.age[mysim$beta_Age > mybins[i] & mysim$beta_Age <=mybins[i+1]] = mybins[i]
+        indexes = which(mysim$beta_Age > mybins[i] & mysim$beta_Age <=mybins[i+1])
+#        samples = sample(indexes,1000,replace=T)
+        samples = sample(indexes,100,replace=T)
+        samples.by.bin[[i]] = samples
+    }
+    
+#            save(mysim,file=paste0(mydir,"/",description,".longer_chains.draws_with_beta_age_binned.RData"))
+            save(mysim,file=paste0(mydir,"/",description,".draws_with_beta_age_binned.RData"))
+#            save(samples.by.bin,file=paste0(mydir,"/",description,".longer_chains.draws_to_sample_by_beta_age_bin.RData"))
+            save(samples.by.bin,file=paste0(mydir,"/",description,".draws_to_sample_by_beta_age_bin.RData"))
+    
+    
+}
+if(FALSE){
+argv <- commandArgs(trailingOnly = TRUE)
+print(argv)
+
+#load(file=paste0(mydir,"/",description,".longer_chains.draws_with_beta_age_binned.RData"))
+load(file=paste0(mydir,"/",description,".draws_with_beta_age_binned.RData"))
+
+load(file=paste0(mydir,"/",description,".draws_to_sample_by_beta_age_bin.RData"))
+
+setwd("/well/donnelly/hilary/maternal_age_and_recombination/")
+#load("/well/donnelly/hilary/maternal_age_and_recombination/duoHMM_data_for_RSTAN.more_stringent.RData")
+load("/well/donnelly/hilary/maternal_age_and_recombination/duoHMM_data_for_RSTAN.more_stringent.with_new_QTR.no_GPC.RData")
+
+
+bin.number= as.numeric(argv[1])
+sim.number =as.numeric(argv[2])
+set.seed(sim.number)
+
+#need to use a coherent set of parameters
+index=samples.by.bin[[bin.number]][sim.number]
+
+####simulate data based on parameters 
+family.effects=rnorm(n=length(unique(data1.mat2$family)),mean=mysim$mu_m[index],sd=sqrt(mysim$sigmasq_m[index]))
+
+a0=family.effects[data1.mat2$family]
+#negative binomial
+fake.y=c()
+for(i in 1:length(a0)){
+#    fake.y=c(fake.y,rnbinom(1,size=exp(0.1*(a0[i] + mysim$beta_Age[index]*data1.mat2$Age[i]))/(mysim$omega[index]-1),prob=1/mysim$omega[index]))
+    fake.y=c(fake.y,rnbinom(1,size=exp((a0[i] + mysim$beta_Age[index]*data1.mat2$Age[i]))/(mysim$omega[index]-1),prob=1/mysim$omega[index]))
+}
+summary(fake.y)
+###prepare data
+sim.data=data1.mat2
+sim.data$y=fake.y
+
+ mu_alpha_prior = 3.7
+  sigmasq_alpha_prior = 2
+  sigmasq_m_alpha = 3
+  sigmasq_m_beta = 0.01
+
+sim.data$sigmasq_m_alpha = sigmasq_m_alpha
+  sim.data$sigmasq_m_beta = sigmasq_m_beta
+  sim.data$mean_alpha_prior = mu_alpha_prior
+  sim.data$sigmasq_alpha_prior = sigmasq_alpha_prior
+
+cohort_by_family=rep(NA,data1.mat2$I)
+for(i in 1:data1.mat2$I){
+          cohort_by_family[i] <- data1.mat2$cohort[data1.mat2$family ==i][1]
+    }
+        sim.data$cohort_by_family = cohort_by_family
+
+### run model
+#model1.6.mat.compiled = stan(file = "/well/donnelly/hilary/maternal_age_and_recombination/bin/RSTAN.model1.5.4.stan",data=sim.data,iter=10000,chains=0)
+model1.6.mat.compiled = stan(file = "/well/donnelly/hilary/maternal_age_and_recombination/bin/RSTAN.model1.5.4.different_link.stan",data=sim.data,iter=10000,chains=0)
+model1.6.mat = stan(fit = model1.6.mat.compiled, data = sim.data,chains = 4, iter=10000,pars=c("beta_Age","omega","mu_m","sigmasq_m","exp_a0"))
+print(model1.6.mat,pars=c("beta_Age","omega","sigmasq_m","mu_m"),digits=4)
+mysim<-extract(model1.6.mat,permuted=T)
+myquantiles=quantile(mysim$beta_Age,c(1/3,2/3,0.25,0.75,1/6,5/6,0.025,0.975,0.005,0.995))
+beta.posterior=mysim$beta_Age
+
+#save(beta.posterior,file=paste0(mydir,"/longer_chains/simulation_with_true_beta_Age_bin_",bin.number,".beta_Age_posteriors.",description,".simulation_",sim.number,".RData"))
+save(beta.posterior,file=paste0(mydir,"/simulation_with_true_beta_Age_bin_",bin.number,".beta_Age_posteriors.",description,".simulation_",sim.number,".RData"))
+
+#write.table(myquantiles,paste0(mydir,"/longer_chains/simulation_with_true_beta_Age_bin_",bin.number,".beta_Age_credible_intervals.",description,".simulation_",sim.number,".txt"))
+write.table(myquantiles,paste0(mydir,"/simulation_with_true_beta_Age_bin_",bin.number,".beta_Age_credible_intervals.",description,".simulation_",sim.number,".txt"))
+}
+if(FALSE){
+coverage.by.beta.age=list()
+exclude=list()
+
+#load(file=paste0(mydir,"/",description,".longer_chains.draws_to_sample_by_beta_age_bin.RData"))
+load(file=paste0(mydir,"/",description,".draws_to_sample_by_beta_age_bin.RData"))
+#load(file=paste0(mydir,"/",description,".longer_chains.draws_with_beta_age_binned.RData"))
+load(file=paste0(mydir,"/",description,".draws_with_beta_age_binned.RData"))
+
+coverage.by.bin=NULL
+for(b in 1:10){
+    all.coverage=as.data.frame(matrix(NA,ncol=100,nrow=10))
+    for(sim.number in 1:100){
+        file.exists=FALSE
+#        if(file.exists(paste0(mydir,"/longer_chains/simulation_with_true_beta_Age_bin_",b,".beta_Age_posteriors.",description,".simulation_",sim.number,".RData"))){
+                if(file.exists(paste0(mydir,"/simulation_with_true_beta_Age_bin_",b,".beta_Age_posteriors.",description,".simulation_",sim.number,".RData"))){
+          file.exists=TRUE
+#          intervals=read.delim(paste0(mydir,"/longer_chains/simulation_with_true_beta_Age_bin_",b,".beta_Age_credible_intervals.",description,".simulation_",sim.number,".txt"),header=T,sep="")
+                    intervals=read.delim(paste0(mydir,"/simulation_with_true_beta_Age_bin_",b,".beta_Age_credible_intervals.",description,".simulation_",sim.number,".txt"),header=T,sep="")
+            }
+        if(file.exists){
+            beta_Age = mysim$beta_Age[samples.by.bin[[b]][sim.number]]
+            coverage=c(            intervals[1,1]<beta_Age & intervals[2,1] > beta_Age, intervals[1,1]<0 & intervals[2,1] > 0,
+              intervals[3,1]<beta_Age & intervals[4,1] > beta_Age,intervals[3,1]<0 & intervals[4,1] > 0,
+              intervals[5,1]<beta_Age & intervals[6,1] > beta_Age, intervals[5,1]<0 & intervals[6,1] > 0,
+              intervals[7,1]<beta_Age & intervals[8,1] > beta_Age, intervals[7,1]<0 & intervals[8,1] > 0,
+              intervals[9,1]<beta_Age & intervals[10,1] > beta_Age, intervals[9,1]<0 & intervals[10,1] > 0)
+             
+            all.coverage[,sim.number]=coverage
+        }
+    }
+    all.coverage=all.coverage[,colSums(is.na(all.coverage))==0]
+
+    total.coverage = rowSums(all.coverage)/ncol(all.coverage)
+    myquantiles=c("33%","50%","66%","95%","99%")
+    names(total.coverage)= c(sapply(myquantiles,function(x){paste(c("coverage_beta_age_","coverage_0_"),x,sep="")}))
+      coverage.by.bin = rbind(coverage.by.bin,total.coverage)
+}
+write.table(coverage.by.bin,paste0(mydir,"/coverage_and_power_by_bin_for_beta_Age.",description,".txt"),quote=F,sep="\t")
+
+mycolors=c("orange","blue","darkgreen","purple","red")
+
+#pdf("/home/hilary/maternal_age_recombination/frequentist_properties/coverage_plot_model1.5.4.maternal.pdf",height=4,width=5,useDingbats=FALSE)
+#pdf(paste0(mydir,"/coverage_plot_model1.5.4.maternal.pdf"),height=4,width=5,useDingbats=FALSE)
+pdf(paste0(mydir,"/coverage_plot_model1.5.4.maternal.exponentiated.pdf"),height=4,width=5,useDingbats=FALSE)
+#myx=mybins[1:(length(mybins)-1)]+(mybins[2:length(mybins)]-mybins[1:(length(mybins)-1)])/2
+myx=exp(mybins[1:(length(mybins)-1)]+(mybins[2:length(mybins)]-mybins[1:(length(mybins)-1)])/2)
+for(i in 1:length(myquantiles)){
+  quant=myquantiles[i]
+  if(i==1){
+#    plot(myx,coverage.by.bin[,paste0("coverage_beta_age_",quant)]*100,col=mycolors[i],xlab="center of beta_Age bin",ylab="Coverage (%)",ylim=c(0,100),xlim=range(mybins),type="b",pch=20,main="Model 2")
+          plot(myx,coverage.by.bin[,paste0("coverage_beta_age_",quant)]*100,col=mycolors[i],xlab="center of beta_Age bin",ylab="Coverage (%)",ylim=c(0,100),xlim=range(exp(mybins)),type="b",pch=20,main="Model 2")
+} else {
+  lines(myx,coverage.by.bin[,paste0("coverage_beta_age_",quant)]*100,col=mycolors[i],type="b",pch=20)
+}
+}
+abline(v=0)
+abline(h=80,lty=2)
+  legend("left",paste(myquantiles,"CI"),col=mycolors,lty=1,cex=0.6,pch=20)
+dev.off()
+
+
+#pdf("/home/hilary/maternal_age_recombination/frequentist_properties/power_plot_model1.5.4.maternal.pdf",height=4,width=5,useDingbats=FALSE)
+#pdf(paste0(mydir,"/power_plot_model1.5.4.maternal.pdf"),height=4,width=5,useDingbats=FALSE)
+pdf(paste0(mydir,"/power_plot_model1.5.4.maternal.exponentiated.pdf"),height=4,width=5,useDingbats=FALSE)
+#myx=mybins[1:(length(mybins)-1)]+(mybins[2:length(mybins)]-mybins[1:(length(mybins)-1)])/2
+myx=exp(mybins[1:(length(mybins)-1)]+(mybins[2:length(mybins)]-mybins[1:(length(mybins)-1)])/2)
+for(i in 1:length(myquantiles)){
+  quant=myquantiles[i]
+  if(i==1){
+
+      #plot(myx,100-coverage.by.bin[,paste0("coverage_0_",quant)]*100,col=mycolors[i],xlab="center of beta_Age bin",ylab="Power (%)",ylim=c(0,100),xlim=range(mybins),type="b",pch=20,main="Model 2")
+      plot(myx,100-coverage.by.bin[,paste0("coverage_0_",quant)]*100,col=mycolors[i],xlab="center of beta_Age bin",ylab="Power (%)",ylim=c(0,100),xlim=range(exp(mybins)),type="b",pch=20,main="Model 2")
+} else {
+  lines(myx,100-coverage.by.bin[,paste0("coverage_0_",quant)]*100,col=mycolors[i],type="b",pch=20)
+}
+}
+abline(v=0)
+abline(h=80,lty=2)
+
+legend("left",paste(myquantiles,"CI"),col=mycolors,lty=1,cex=0.6,pch=20)
+
+dev.off()
+
+}

@@ -1,0 +1,626 @@
+events.files=c("NTR/NFTOOLS/output_data/NTR_minus_MZs.all_chrs.no_errors.inrecomb_k5.list.txt.events","NTR/NFTOOLS/output_data/NTR_v2_minus_MZs.all_chrs.no_errors.inrecomb_k5.list.txt.events",
+    "QTR/NFTOOLS/output_data/QTR_minus_MZs.370K.all_chrs.no_errors.inrecomb_k5.list.txt.events","QTR/NFTOOLS/output_data/QTR_minus_MZs.610K.all_chrs.no_errors.inrecomb_k5.list.txt.events",
+    "FC/NFTOOLS/output_data/FC.all_chrs.no_errors.inrecomb_k5.list.txt.events","GPC/NFTOOLS/output_data/GPC.all_chrs.no_errors.inrecomb_k5.list.txt.events",
+    "VB/NFTOOLS/output_data/VB.all_chrs.no_errors.inrecomb_k5.list.txt.events")
+
+counts.files=c("NTR/NFTOOLS/final_data/NTR_minus_MZs.all_chrs.no_errors.k_5.family_stats.txt","NTR/NFTOOLS/final_data/NTR_v2_minus_MZs.all_chrs.no_errors.k_5.family_stats.txt",
+    "QTR/NFTOOLS/final_data/QTR_minus_MZs.370K.all_chrs.no_errors.k_5.family_stats.txt","QTR/NFTOOLS/final_data/QTR_minus_MZs.610K.all_chrs.no_errors.k_5.family_stats.txt",
+    "FC/NFTOOLS/final_data/FC.all_chrs.no_errors.k_5.family_stats.txt","GPC/NFTOOLS/final_data/GPC.all_chrs.no_errors.k_5.family_stats.txt","VB/NFTOOLS/final_data/VB.all_chrs.no_errors.k_5.family_stats.txt")
+
+
+fam.files=c("NTR/input_for_SHAPEIT2/NTR_minus_MZs.1.post_MERLIN.max_0.05_missing.generr_removed.fam","NTR/input_for_SHAPEIT2/NTR_v2_minus_MZs.1.post_MERLIN.max_0.05_missing.generr_removed.fam",
+    "QTR/input_for_SHAPEIT2/QTR_minus_MZs.370K.1.post_MERLIN.max_0.05_missing.generr_removed.fam",    "QTR/input_for_SHAPEIT2/QTR_minus_MZs.610K.1.post_MERLIN.max_0.05_missing.generr_removed.fam",
+    "FC/input_for_SHAPEIT2/FC.1.post_MERLIN.generr_removed.max_0.05_missing.fam",    "GPC/input_for_SHAPEIT2/GPC.chr1.no_mendel_errors.post_MERLIN.generr_removed.fam",    "VB/valborbera_b37-related.fam")
+    
+names(counts.files)=c("NTR_v1","NTR_v2","QTR_370K","QTR_610K","FC","GPC","VB")
+names(events.files)=names(counts.files)
+names(fam.files)=names(counts.files)
+counts.by.parents=list()
+all.events=list()
+
+
+remove.outliers=function(r,fam,cohort){
+        #remove families in FC cohort due to MZ twins/duplicates (76), and because of low maternal counts, reason unknown (52)
+    if(cohort=="FC"){
+        r=r[!r$child %in% fam[fam[,1] %in% c("52", "76"),2],]
+    }
+                  #remove families FVG to due to pedigree erros
+    if(cohort=="FVG"){
+        r=r[!r$child %in% fam[fam[,1] %in% c("69", "148"),2],]
+    }
+                                        #remove families in VB: 143 and 64 each contain a cryptic pair of MZ twins or duplicate samples
+    if(cohort=="VB"){
+        r=r[!r$child %in% fam[fam[,1] %in% c("64", "143"),2],]
+    }
+                                        #remove families from NTR: 10689 seems to have three times the same sample; 11880 is strange (maybe too much missingness in mother)
+    if(cohort=="NTR_v1"|cohort=="NTR_v2"){
+        r=r[!r$child %in% fam[fam[,1] %in% c("10689", "11880"),2],]
+    }
+    if(cohort=="GPC"){
+  #remove dodgy family 188 (mother APP5117398, father APP5117401 or APP5117402_dummyfather from GPC; think relationships are mis-specified
+        r=r[!r$child %in% c("APP5117399","APP5119341"),]
+    }
+    return(r)
+}
+all.fams=list()
+
+outliers=list()
+for(c in 1:length(counts.files)){
+    counts=read.delim(counts.files[c],header=T,stringsAsFactors=F,skip=2,colClasses=c("integer",rep("character",3),rep("numeric",8)))
+    counts.by.parents[[names(counts.files)[c]]]=counts
+    fam=read.delim(fam.files[c],header=F,colClasses=c(rep("character",4),rep("numeric",2)),sep="")
+    all.fams[[names(counts.files)[c]]]=fam
+    events=read.delim(events.files[c],header=T,stringsAsFactors=F,colClasses=c("character","integer","integer","character","character","integer","character","integer"))
+    events=remove.outliers(events,fam,names(counts.files)[c])
+    events.by.child=as.data.frame(table(events[,c("child","sex")]))
+    events.by.child$family=events[match(events.by.child$child,events$child),"fam"]
+    family.count=table(events.by.child$family)/2
+    events.by.child$nkids = family.count[as.character( events.by.child$family)]
+    outliers[[names(counts.files)[c]]]=events.by.child[(events.by.child$nkids>2)&((events.by.child$sex=="male" & (events.by.child$Freq<9 |events.by.child$Freq > 45))|(events.by.child$sex=="female" &
+       (events.by.child$Freq<10|events.by.child$Freq > 76)))|(events.by.child$nkids==1) &  ((events.by.child$sex=="male" &
+      (events.by.child$Freq<2*9 |events.by.child$Freq > 2*45))|(events.by.child$sex=="female" &(events.by.child$Freq<2*10|events.by.child$Freq > 2*76))),]
+    events.by.child=events.by.child[!(events.by.child$nkids>2 & ((events.by.child$sex=="male" & (events.by.child$Freq<9 |events.by.child$Freq > 45))|(events.by.child$sex=="female" &
+         (events.by.child$Freq<10 |events.by.child$Freq > 76)))|(events.by.child$nkids==1) &  ((events.by.child$sex=="male" & (events.by.child$Freq<2*9 |events.by.child$Freq > 2*45))|(events.by.child$sex=="female"
+      &(events.by.child$Freq<2*10|events.by.child$Freq > 2*76)))),]
+    events.by.child$cohort=names(counts.files)[c]
+    all.events[[names(counts.files)[c]]]=events.by.child
+
+}
+informative = rbind(unlist(lapply(all.events,function(events){sum(events$sex=="female" & events$nkids>2)})),unlist(lapply(all.events,function(events){sum(events$sex=="male" & events$nkids>2)})))
+rowSums(informative[,-1])
+
+save(all.events,file="NFTOOLS_results/NFTOOLS_counts.all_families_except_outliers.RData")
+qqr <- function(k1,rate,col1,makeplot=TRUE,title,limits,xlowerlimit,...) {
+      k1 <- sort(k1)
+        n <- length(k1)
+        e <- qpois(1:n/(n+1),rate)
+        l <- c(min(k1),min(max(k1),rate+6*sqrt(rate)))
+        etmp <- e[k1>=l[2]]
+        ret <- cbind(jitter(etmp),l[2])
+
+        if(makeplot) {
+                 # plot(e,k1,type='n',xlab="",ylab="",ylim=l,main=title,...)
+                   plot(e,k1,type='n',xlab="",ylab="",ylim=limits,xlim=c(xlowerlimit,max(limits)),main=title,...)
+                         abline(0,1,col=1,lty=2);grid()
+                         points(jitter(e[k1<l[2]]),jitter((k1[k1<l[2]])),col=col1,pch=16)
+                         points(ret,col=col1,pch=17)
+               }
+
+        return(  cbind(e,k1))
+  }
+male.lengths <- c(1.9512,1.8955,1.6071,1.4654,1.512,1.3762,1.2835,1.0794,1.1725,1.3389,1.0936,1.3554,1.0131,0.9462,1.0257,1.081,1.0856,0.9862,0.9264,0.7472,0.4731,0.4896)
+female.lengths <- c(3.4541,3.2541,2.7564,2.5906,2.6019,2.4159,2.3033,2.0994,1.982,2.1813,1.9553,2.0664,1.5588,1.4236,1.5496,1.4962,1.6153,1.4257,1.2682,1.2197,0.764,0.8276)
+malesize <- sum(male.lengths)
+femalesize <- sum(female.lengths)
+
+for(i in 1:length(all.events)){
+    rec=all.events[[i]]
+    rec.2kids=rec[rec$nkids==1,]
+    rec.2kids$Freq=rec.2kids$Freq/2
+    rec=rec[rec$nkids>2,]
+    pdf(paste0("/home/hilary/maternal_age_recombination/qqplots_NFTOOLS/",names(all.events)[i],"-qq.pdf"),width=12,height=6)
+    par(mar=c(2,2,1,1),mfrow=c(1,2),cex=1,oma=c(2,2,0,0))
+    tmp <- qqr(subset(rec,sex=="male")$Freq,malesize,"red",title=paste(names(all.events)[i]," paternal"),
+               limits=range(subset(rec,sex=="male")$Freq),xlowerlimit=10)
+    points(jitter(qqr(subset(rec.2kids,sex=="male")$Freq,malesize,makeplot=0)),pch=16,col="darkgreen")
+    legend("topleft",c("phase known","phased unknown"),pch=16,col=c("red","darkgreen"))
+    cat(names(all.events)[i],"\t",range(subset(rec,sex=="male")$Freq),"\n")
+    if(sum(rec$sex=="male" & rec$Freq>50)>0){
+       print(rec[rec$sex=="male" & rec$Freq>50,])
+    }
+    tmp <- qqr(subset(rec,sex=="female")$Freq,femalesize,"red",title=paste(names(all.events)[i]," maternal"),
+               limits=range(subset(rec,sex=="female")$Freq),xlowerlimit=20)
+        points(jitter(qqr(subset(rec.2kids,sex=="female")$Freq,femalesize,makeplot=0)),pch=16,col="darkgreen")  
+    cat(names(all.events)[i],"\t",range(subset(rec,sex=="female")$Freq),"\n")
+    if(sum(rec$sex=="female" & rec$Freq>70)>0){
+        print(rec[rec$sex=="female" & rec$Freq>70,])
+    }
+#    points(jitter(qqr(subset(rec.flt5,sex=="female")$Freq,femalesize,makeplot=0)),pch=16,col=cols[5])
+    mtext("Expected recombinations genome-wide",1,outer=T,cex=1.6,padj=1.7)
+    mtext("Observed recombinations genome-wide",2,outer=T,cex=1.6,padj=-1)
+    dev.off()
+}
+
+
+#plotting histograms of distributions
+
+for(i in 1:length(all.events)){
+    pdf(paste0("/home/hilary/maternal_age_recombination/qqplots_NFTOOLS/",names(all.events)[i],".histograms.pdf"),width=8,height=8)
+    par(mfrow=c(2,2))
+    rec=all.events[[i]]
+    rec.2kids=rec[rec$nkids==1,]
+    rec.2kids$Freq=rec.2kids$Freq/2
+    rec=rec[rec$nkids>2,]
+    hist(subset(rec,sex=="male")$Freq,main="male, phase known",xlab="Number of recombinations",col="lightblue")
+    abline(v=25.9,col="darkgreen",lwd=2)
+    abline(v=26.6,col="blue",lwd=2)
+    abline(v=mean(subset(rec,sex=="male")$Freq),col="black",lwd=2)
+     legend("topleft",c("deCODE","Adam","these data"),col=c("darkgreen","blue","black"),lwd=2,lty=1)
+
+    hist(subset(rec.2kids,sex=="male")$Freq,main="male, phase unknown",xlab="Number of recombinations",col="lightblue")
+    abline(v=25.9,col="darkgreen",lwd=2)
+    abline(v=26.6,col="blue",lwd=2)
+    abline(v=mean(subset(rec.2kids,sex=="male")$Freq),col="black",lwd=2)
+    abline(v=mean(subset(rec,sex=="male")$Freq),col="black",lwd=2,lty=2)
+    legend("topleft","phase known",col="black",lwd=2,lty=2)
+    
+    hist(subset(rec,sex=="female")$Freq,main="female, phase known",xlab="Number of recombinations",col="pink")
+    abline(v=42.81,col="darkgreen",lwd=2)
+    abline(v=41.6,col="blue",lwd=2)
+    abline(v=mean(subset(rec,sex=="female")$Freq),col="black",lwd=2)
+
+    hist(subset(rec.2kids,sex=="female")$Freq,main="female, phase unknown",xlab="Number of recombinations",col="pink")
+    abline(v=42.81,col="darkgreen",lwd=2)
+    abline(v=41.6,col="blue",lwd=2)
+    abline(v=mean(subset(rec.2kids,sex=="female")$Freq),col="black",lwd=2)
+    abline(v=mean(subset(rec,sex=="female")$Freq),col="black",lwd=2,lty=2)
+    legend("topleft","phase known",col="black",lwd=2,lty=2)
+
+    dev.off()
+}
+### compare NFTOOLS to duoHMM
+
+duoHMM.files=c("NTR/duoHMM_results/NTR_minus_MZs.all.post_MERLIN.max_0.05_missing.generr_removed.recombination_count.p_0.5.annotated.double_xovers_within_X_SNPs_removed.txt",
+    "NTR/duoHMM_results/NTR_v2_minus_MZs.all.post_MERLIN.max_0.05_missing.generr_removed.recombination_count.p_0.5.annotated.double_xovers_within_X_SNPs_removed.txt",
+    "QTR/duoHMM_results/QTR_minus_MZs.370K.all.post_MERLIN.max_0.05_missing.generr_removed.recombination_count.p_0.5.annotated.double_xovers_within_X_SNPs_removed.txt",
+    "QTR/duoHMM_results/QTR_minus_MZs.610K.all.post_MERLIN.max_0.05_missing.generr_removed.recombination_count.p_0.5.annotated.double_xovers_within_X_SNPs_removed.txt",
+    "FC/duoHMM_results/FC.all.post_MERLIN.generr_removed.recombination_count.p_0.5.annotated.double_xovers_within_X_SNPs_removed.txt",
+    "GPC/duoHMM_results/GPC.all.post_MERLIN.generr_removed.recombination_count.p_0.5.annotated.double_xovers_within_X_SNPs_removed.txt",
+    "VB/duoHMM_results/VB.all.generr_removed.recombination_count.p_0.5.annotated.double_xovers_within_X_SNPs_removed.txt")
+names(duoHMM.files)=c("NTR_v1","NTR_v2","QTR_370K","QTR_610K","FC","GPC","VB")
+
+age.files=c("NTR/NTR_minus_MZs.with_parental_age.txt","NTR/NTR_v2_minus_MZs.with_parental_age.txt","QTR/QTR_minus_MZs.370K.with_parental_age.txt","QTR/QTR_minus_MZs.610K.with_parental_age.txt","FC/FC.with_parental_age.txt",
+    "GPC/GPC.with_parental_age.txt",    "VB/valborbera_b37-related.with_parental_age.txt")
+names(age.files)=names(all.events)
+library(scales)
+NFTOOLS.inf.mat.data.with.age=NULL
+NFTOOLS.uninf.mat.data.with.age=NULL
+NFTOOLS.inf.pat.data.with.age=NULL
+NFTOOLS.uninf.pat.data.with.age=NULL
+for(i in 1:length(all.events)){
+    events=all.events[[i]]
+    events$cohort=names(all.events)[i]
+    ages=read.delim(age.files[i],header=T,stringsAsFactors=F)
+    ages$individual=gsub("-","_",ages$individual)
+    ages$mother=gsub("-","_",ages$mother)
+    ages$father=gsub("-","_",ages$father)
+    mat.events.inf=events[events$sex=="female" & events$nkids>2,]
+    pat.events.inf=events[events$sex=="male" & events$nkids>2,]
+    mat.events.uninf=events[events$sex=="female" & events$nkids==1,]
+    pat.events.uninf=events[events$sex=="male" & events$nkids==1,]
+    mat.events.inf$age=ages[match(mat.events.inf$child,ages$individual),"maternal_age"]
+    pat.events.inf$age=ages[match(pat.events.inf$child,ages$individual),"paternal_age"]
+    mat.events.uninf$sib1.age=ages[match(mat.events.uninf$child,ages$individual),"maternal_age"]
+    pat.events.uninf$sib1.age=ages[match(pat.events.uninf$child,ages$individual),"paternal_age"]
+   
+    mat.events.uninf$sib2.age=NA
+    pat.events.uninf$sib2.age=NA
+    mat.events.uninf$sib2=NA
+    pat.events.uninf$sib2=NA
+    for(j in 1:nrow(mat.events.uninf)){
+        mat=ages[ages$individual==mat.events.uninf[j,"child"],"mother"]
+        sibs=ages[ages$mother == mat,"individual"]
+        sib=sibs[1]
+        if(sibs[1]==mat.events.uninf[j,"child"]){            sib=sibs[2]        }
+        mat.events.uninf$sib2[j]=sib
+        mat.events.uninf$sib2.age[j]=ages[ages$individual==sib,"maternal_age"]
+        
+    }
+    
+    for(j in 1:nrow(pat.events.uninf)){
+        pat=ages[ages$individual==pat.events.uninf[j,"child"],"father"]
+        sibs=ages[ages$father == pat,"individual"]
+        sib=sibs[1]
+        if(sibs[1]==pat.events.uninf[j,"child"]){            sib=sibs[2]        }
+        pat.events.uninf$sib2[j]=sib
+        pat.events.uninf$sib2.age[j]=ages[ages$individual==sib,"paternal_age"]
+        
+    }
+    mat.events.uninf$av.Freq=mat.events.uninf$Freq/2
+    pat.events.uninf$av.Freq=pat.events.uninf$Freq/2
+    NFTOOLS.inf.mat.data.with.age=rbind(NFTOOLS.inf.mat.data.with.age,mat.events.inf)
+    NFTOOLS.inf.pat.data.with.age=rbind(NFTOOLS.inf.pat.data.with.age,pat.events.inf)
+    NFTOOLS.uninf.mat.data.with.age=rbind(NFTOOLS.uninf.mat.data.with.age,mat.events.uninf)
+    NFTOOLS.uninf.pat.data.with.age=rbind(NFTOOLS.uninf.pat.data.with.age,pat.events.uninf)
+    
+if(FALSE){
+    duoHMM=read.delim(duoHMM.files[names(all.events)[i]],header=T,stringsAsFactors=F)
+    duoHMM.mat=duoHMM[duoHMM$sex=="Female",]
+    duoHMM.pat=duoHMM[duoHMM$sex=="Male",]
+    mat.events.inf$duoHMM.Freq=duoHMM.mat[match(mat.events.inf$child,duoHMM.mat$CHILD),"nrec"]
+    pat.events.inf$duoHMM.Freq=duoHMM.pat[match(pat.events.inf$child,duoHMM.pat$CHILD),"nrec"]
+
+    mat.events.uninf$duoHMM.sib1.Freq=duoHMM.mat[match(mat.events.uninf$child,duoHMM.mat$CHILD),"nrec"]
+    pat.events.uninf$duoHMM.sib1.Freq=duoHMM.pat[match(pat.events.uninf$child,duoHMM.pat$CHILD),"nrec"]
+
+    mat.events.uninf$duoHMM.sib2.Freq=duoHMM.mat[match(mat.events.uninf$sib2,duoHMM.mat$CHILD),"nrec"]
+    pat.events.uninf$duoHMM.sib2.Freq=duoHMM.pat[match(pat.events.uninf$sib2,duoHMM.pat$CHILD),"nrec"]
+
+    mat.events.uninf$duoHMM.total.Freq=mat.events.uninf$duoHMM.sib1.Freq + mat.events.uninf$duoHMM.sib2.Freq
+    pat.events.uninf$duoHMM.total.Freq=pat.events.uninf$duoHMM.sib1.Freq + pat.events.uninf$duoHMM.sib2.Freq
+
+    pdf(paste0("/home/hilary/maternal_age_recombination/qqplots_NFTOOLS/",names(all.events)[i],".comparing_NFTOOLS_to_duoHMM.informative_vs_2kid_families.pdf"),width=8,height=8)
+    par(mfrow=c(2,2))
+    plot(jitter(mat.events.inf$Freq),jitter(mat.events.inf$duoHMM.Freq),xlab="NFTOOLS",ylab="duoHMM",main="Maternal, phase known",col=alpha("red",0.5),pch=19)
+    abline(a=0,b=1)
+    plot(jitter(pat.events.inf$Freq),jitter(pat.events.inf$duoHMM.Freq),xlab="NFTOOLS",ylab="duoHMM",main="Paternal, phase known",col=alpha("blue",0.5),pch=19)
+    abline(a=0,b=1)
+    plot(jitter(mat.events.uninf$Freq),jitter(mat.events.uninf$duoHMM.total.Freq),xlab="NFTOOLS total for 2 kids",ylab="duoHMM total for 2 kids",main="Maternal, phase unknown",col=alpha("red",0.5),pch=19)
+    abline(a=0,b=1)
+    plot(jitter(pat.events.uninf$Freq),jitter(pat.events.uninf$duoHMM.total.Freq),xlab="NFTOOLS total for 2 kids",ylab="duoHMM total for 2 kids",main="Paternal, phase unknown",col=alpha("blue",0.5),pch=19)
+    abline(a=0,b=1)
+    dev.off()
+}
+}
+
+#summaries of distributions
+cohort.distributions=NULL
+summarise.distribution=function(x){
+    return(c(length(x),mean(x),quantile(x,c(0,0.25,0.5,0.75,1)),sd(x)))
+}
+
+for(i in 1:length(all.events)){
+    rec=all.events[[i]]
+    rec.2kids=rec[rec$nkids==1,]
+    rec.2kids$Freq=rec.2kids$Freq/2
+    rec=rec[rec$nkids>2,]
+    cohort.distributions=rbind(cohort.distributions,c(summarise.distribution(subset(rec,sex=="male")$Freq),summarise.distribution( subset(rec.2kids,sex=="male")$Freq),summarise.distribution( subset(rec,sex=="female")$Freq),
+        summarise.distribution( subset(rec.2kids,sex=="female")$Freq)))
+}
+
+rownames(cohort.distributions)=names(all.events)
+colnames(cohort.distributions)=sapply(c("male.phase.known","male.phase.unknown","female.phase.known","female.phase.unknown"),function(x){paste0(x,c(".n",".mean",".min",".25th",".median",".75th",".max",".sd"))})
+
+write.table(cohort.distributions,"/home/hilary/maternal_age_recombination/qqplots_NFTOOLS/summary_of_distributions.NFTOOLS.txt",quote=F,sep="\t")
+
+
+
+### testing inter-twin correlation
+#qtr.370.duohmm.all=read.delim("/well/donnelly/hilary/maternal_age_and_recombination/QTR/duoHMM_results/QTR_minus_MZs.370K.all.post_MERLIN.max_0.05_missing.generr_removed.recombination_count.p_0.5.annotated.double_xovers_within_X_SNPs_removed.txt",header=T,stringsAsFactors=F)
+#qtr.610.duohmm.all=read.delim("/well/donnelly/hilary/maternal_age_and_recombination/QTR/duoHMM_results/QTR_minus_MZs.610K.all.post_MERLIN.max_0.05_missing.generr_removed.recombination_count.p_0.5.annotated.double_xovers_within_X_SNPs_removed.txt",header=T,stringsAsFactors=F)
+#ntr.duohmm.all=read.delim("NTR/duoHMM_results/NTR_v2_minus_MZs.all.post_MERLIN.max_0.05_missing.generr_removed.recombination_count.p_0.5.annotated.double_xovers_within_X_SNPs_removed.txt",header=T,stringsAsFactors=F)
+
+qtr.610.mat=read.delim("/home/hilary/TwinRecombination/Brisbane/NFTOOLS_maternal_counts_for_QTR_610K_families.twins_and_sibling.txt",header=T,stringsAsFactors=F,colClasses=c("character","character","integer","character",
+    "integer","character","integer","numeric","numeric"))
+qtr.all.mat=read.delim("/home/hilary/TwinRecombination/Brisbane/NFTOOLS_maternal_counts_for_all_QTR_families_610_or_370_separately.twins_and_sibling.txt",header=T,stringsAsFactors=F,
+    colClasses=c("character","character","integer","character","integer","character","integer","numeric","numeric"))
+qtr.370.mat=qtr.all.mat[!qtr.all.mat$mother %in% qtr.610.mat$mother,]
+ntr.mat=read.delim("/home/hilary/TwinRecombination/Amsterdam/NFTOOLS_maternal_counts_for_all_NTR_families.twins_and_sibling.txt",header=T,stringsAsFactors=F,
+    colClasses=c("character","character","integer","character","integer","character","integer","numeric","numeric"))
+
+qtr.610.pat=read.delim("/home/hilary/TwinRecombination/Brisbane/NFTOOLS_paternal_counts_for_QTR_610K_families.twins_and_sibling.txt",header=T,stringsAsFactors=F,
+    colClasses=c("character","character","integer","character","integer","character","integer","numeric","numeric"))
+qtr.all.pat=read.delim("/home/hilary/TwinRecombination/Brisbane/NFTOOLS_paternal_counts_for_all_QTR_families_610_or_370_separately.twins_and_sibling.txt",header=T,stringsAsFactors=F,
+    colClasses=c("character","character","integer","character","integer","character","integer","numeric","numeric"))
+
+qtr.370.pat=qtr.all.pat[!qtr.all.pat$father %in% qtr.610.pat$father,]
+ntr.pat=read.delim("/home/hilary/TwinRecombination/Amsterdam/NFTOOLS_paternal_counts_for_all_NTR_families.twins_and_sibling.txt",header=T,stringsAsFactors=F,
+    colClasses=c("character","character","integer","character","integer","character","integer","numeric","numeric"))
+
+
+new.ntr=all.events[[2]]
+new.ntr.female=new.ntr[new.ntr$sex=="female",]
+new.ntr.male=new.ntr[new.ntr$sex=="male",]
+
+new.ntr.mat =ntr.mat[ntr.mat$twin1 %in% new.ntr$child[new.ntr$sex=="female"] | ntr.mat$twin2 %in% new.ntr$child[new.ntr$sex=="female"]|ntr.mat$sib %in% new.ntr$child[new.ntr$sex=="female"],]
+new.ntr.mat$twin1_mat_count=new.ntr.female[match(new.ntr.mat$twin1,new.ntr.female$child),"Freq"]
+new.ntr.mat$twin2_mat_count=new.ntr.female[match(new.ntr.mat$twin2,new.ntr.female$child),"Freq"]
+new.ntr.mat$sib_mat_count=new.ntr.female[match(new.ntr.mat$sib,new.ntr.female$child),"Freq"]
+
+new.ntr.pat =ntr.pat[ntr.pat$twin1 %in% new.ntr$child[new.ntr$sex=="male"] | ntr.pat$twin2 %in% new.ntr$child[new.ntr$sex=="male"]|ntr.pat$sib %in% new.ntr$child[new.ntr$sex=="male"],]
+new.ntr.pat$twin1_pat_count=new.ntr.male[match(new.ntr.pat$twin1,new.ntr.male$child),"Freq"]
+new.ntr.pat$twin2_pat_count=new.ntr.male[match(new.ntr.pat$twin2,new.ntr.male$child),"Freq"]
+new.ntr.pat$sib_pat_count=new.ntr.male[match(new.ntr.pat$sib,new.ntr.male$child),"Freq"]
+
+write.table(new.ntr.mat,"/home/hilary/TwinRecombination/Amsterdam/NFTOOLS_maternal_counts_for_all_NTR_v2_families.twins_and_sibling.txt",col.names=T,row.names=F,quote=F,sep="\t")
+write.table(new.ntr.pat,"/home/hilary/TwinRecombination/Amsterdam/NFTOOLS_paternal_counts_for_all_NTR_v2_families.twins_and_sibling.txt",col.names=T,row.names=F,quote=F,sep="\t")
+
+write.table(new.ntr.mat,"/well/donnelly/hilary/maternal_age_and_recombination/NFTOOLS_results/NFTOOLS_maternal_counts_for_all_NTR_v2_families.twins_and_sibling.txt",col.names=T,row.names=F,quote=F,sep="\t")
+write.table(new.ntr.pat,"/well/donnelly/hilary/maternal_age_and_recombination/NFTOOLS_results/NFTOOLS_paternal_counts_for_all_NTR_v2_families.twins_and_sibling.txt",col.names=T,row.names=F,quote=F,sep="\t")
+
+
+
+cor.diff.test = function(r1, r2, n1, n2, alternative = c("two.sided", "less", "greater")) {
+      Z1 = 0.5 * log( (1+r1)/(1-r1) )
+        Z2 = 0.5 * log( (1+r2)/(1-r2) )
+        diff = Z1 - Z2
+        SEdiff = sqrt( 1 / (n1 - 3) + 1 / (n2 - 3))
+        diff.Z = diff / SEdiff
+
+        if (alternative == "less") {
+                return(pnorm(diff.Z, lower.tail=F))
+            } else if (alternative == "greater") {
+                    return(pnorm(-diff.Z, lower.tail=F))
+                } else if (alternative == "two.sided") {
+                        return(2 * pnorm( abs(diff.Z), lower.tail=F))
+                    } else {
+                            warning(paste("Invalid alterantive", alternative), domain=NA)
+                                return(NA)
+                        }
+  }
+
+compare.correlations.by.simulation=function(counts,method,n){
+      twin.corr.test=cor.test(counts[,1],counts[,2],method=method)
+        twin.corr=twin.corr.test$estimate
+      twin1.sib.corr.test=cor.test(counts[,1],counts[,3],method=method)
+      twin2.sib.corr.test=cor.test(counts[,2],counts[,3],method=method)
+      twin1.sib.corr=twin1.sib.corr.test$estimate
+      twin2.sib.corr=twin2.sib.corr.test$estimate
+
+
+      cor.diff.test(twin.corr,twin2.sib.corr,n1=nrow(counts),n2=nrow(counts),alternative="less")
+#      paired.r(xy=twin.corr, xz=twin1.sib.corr, yz=twin2.sib.corr, n=nrow(counts))
+    #, n2=NULL,twotailed=TRUE)
+        twin.p=twin.corr.test$p.value
+      twin.vs.twin1.sib.p=       cor.diff.test(twin.corr,twin1.sib.corr,n1=nrow(counts),n2=nrow(counts),alternative="less")
+      twin.vs.twin2.sib.p=       cor.diff.test(twin.corr,twin2.sib.corr,n1=nrow(counts),n2=nrow(counts),alternative="less")
+if(FALSE){
+      sim.corr=c()
+        for(i in 1:n){
+                random.counts=apply(counts,1,function(x){return(x[sample(2,size=1)])})
+                    random.corr.test=cor.test(counts[,3],random.counts,method=method)
+                    random.corr=random.corr.test$estimate
+                    sim.corr=c(sim.corr,random.corr)
+            }
+        empirical.p=sum(sim.corr>=twin.corr)/n
+        return(c(nrow(counts),twin.corr,twin.p,twin.vs.twin1.sib.p,twin.vs.twin2.sib.p,empirical.p))
+  }
+              return(c(nrow(counts),twin.corr,twin.p,twin1.sib.corr,twin.vs.twin1.sib.p,twin2.sib.corr,twin.vs.twin2.sib.p))
+  }
+
+#[1] "NTR_v1"   "NTR_v2"   "QTR_370K" "QTR_610K"
+
+old.nftools.mat=list(ntr.mat,ntr.mat,qtr.370.mat,qtr.610.mat)
+old.nftools.pat=list(ntr.pat,ntr.pat,qtr.370.pat,qtr.610.pat)
+
+old.qtr610.mat.pearson = compare.correlations.by.simulation(qtr.610.mat[,c(3,5,7)],"pearson",1000)
+old.qtr610.mat.spearman = compare.correlations.by.simulation(qtr.610.mat[,c(3,5,7)],"spearman",1000)
+old.qtr610.pat.pearson = compare.correlations.by.simulation(qtr.610.pat[,c(3,5,7)],"pearson",1000)
+old.qtr610.pat.spearman = compare.correlations.by.simulation(qtr.610.pat[,c(3,5,7)],"spearman",1000)
+
+old.qtr370.mat.pearson = compare.correlations.by.simulation(qtr.370.mat[,c(3,5,7)],"pearson",1000)
+old.qtr370.mat.spearman = compare.correlations.by.simulation(qtr.370.mat[,c(3,5,7)],"spearman",1000)
+old.qtr370.pat.pearson = compare.correlations.by.simulation(qtr.370.pat[,c(3,5,7)],"pearson",1000)
+old.qtr370.pat.spearman = compare.correlations.by.simulation(qtr.370.pat[,c(3,5,7)],"spearman",1000)
+
+old.ntr.mat.pearson = compare.correlations.by.simulation(ntr.mat[,c(3,5,7)],"pearson",1000)
+old.ntr.mat.spearman = compare.correlations.by.simulation(ntr.mat[,c(3,5,7)],"spearman",1000)
+old.ntr.pat.pearson = compare.correlations.by.simulation(ntr.pat[,c(3,5,7)],"pearson",1000)
+old.ntr.pat.spearman = compare.correlations.by.simulation(ntr.pat[,c(3,5,7)],"spearman",1000)
+
+all.results=rbind(c(old.qtr610.mat.pearson,old.qtr610.mat.spearman,old.qtr610.pat.pearson,old.qtr610.pat.spearman),c(old.qtr370.mat.pearson,old.qtr370.mat.spearman,old.qtr370.pat.pearson,old.qtr370.pat.spearman),
+    c(old.ntr.mat.pearson,old.ntr.mat.spearman,old.ntr.pat.pearson,old.ntr.pat.spearman))
+
+# families 10869 and 13093 in NTR_V1 look like outliers
+for(i in 1:4){
+    new.nftools=all.events[[i]]
+    nftools.mat=new.nftools[new.nftools$sex=="female",]
+    nftools.pat=new.nftools[new.nftools$sex=="male",]
+    nftools.mat$child=as.character(nftools.mat$child)
+    nftools.pat$child=as.character(nftools.pat$child)
+    
+   # new.nftools.mat = cbind(old.nftools.mat[[i]]$mother,old.nftools.mat[[i]]$twin1,nftools.mat[match(old.nftools.mat[[i]]$twin1,nftools.mat$child),"Freq"],old.nftools.mat[[i]]$twin2,
+#    nftools.mat[match(old.nftools.mat[[i]]$twin2,nftools.mat$child),"Freq"],
+   #     old.nftools.mat[[i]]$sib,nftools.mat[match(old.nftools.mat[[i]]$sib,nftools.mat$child),"Freq"])
+   # new.nftools.pat = cbind(old.nftools.pat[[i]]$father,old.nftools.pat[[i]]$twin1,nftools.pat[match(old.nftools.pat[[i]]$twin1,nftools.pat$child),"Freq"],old.nftools.pat[[i]]$twin2,
+#    nftools.pat[match(old.nftools.pat[[i]]$twin2,nftools.pat$child),"Freq"],
+   #     old.nftools.pat[[i]]$sib,nftools.pat[match(old.nftools.pat[[i]]$sib,nftools.pat$child),"Freq"])
+        new.nftools.mat = cbind(nftools.mat[match(old.nftools.mat[[i]]$twin1,nftools.mat$child),"Freq"],nftools.mat[match(old.nftools.mat[[i]]$twin2,nftools.mat$child),"Freq"],
+            nftools.mat[match(old.nftools.mat[[i]]$sib,nftools.mat$child),"Freq"])
+#    new.nftools.pat = cbind(old.nftools.pat[[i]]$father,old.nftools.pat[[i]]$twin1,nftools.pat[match(old.nftools.pat[[i]]$twin1,nftools.pat$child),"Freq"],old.nftools.pat[[i]]$twin2,
+ #   nftools.pat[match(old.nftools.pat[[i]]$twin2,nftools.pat$child),"Freq"],
+#        old.nftools.pat[[i]]$sib,nftools.pat[match(old.nftools.pat[[i]]$sib,nftools.pat$child),"Freq"])
+       new.nftools.pat = cbind(nftools.pat[match(old.nftools.pat[[i]]$twin1,nftools.pat$child),"Freq"],nftools.pat[match(old.nftools.pat[[i]]$twin2,nftools.pat$child),"Freq"],
+           nftools.pat[match(old.nftools.pat[[i]]$sib,nftools.pat$child),"Freq"])
+
+    new.nftools.mat=new.nftools.mat[rowSums(is.na(new.nftools.mat))==0,]
+    new.nftools.pat=new.nftools.pat[rowSums(is.na(new.nftools.pat))==0,]
+    
+    mat.pearson =compare.correlations.by.simulation(new.nftools.mat,"pearson",1000)
+    mat.spearman=compare.correlations.by.simulation(new.nftools.mat,"spearman",1000)
+    pat.pearson=compare.correlations.by.simulation(new.nftools.pat,"pearson",1000)
+    pat.spearman=compare.correlations.by.simulation(new.nftools.pat,"spearman",1000)
+    all.results=rbind(all.results,c(  mat.pearson,  mat.spearman,    pat.pearson,    pat.spearman))
+}
+
+    #combine all new data
+new.nftools=rbind(all.events[[2]],all.events[[3]],all.events[[4]] )
+
+nftools.mat=new.nftools[new.nftools$sex=="female",]
+nftools.pat=new.nftools[new.nftools$sex=="male",]
+nftools.mat$child=as.character(nftools.mat$child)
+nftools.pat$child=as.character(nftools.pat$child)
+new.nftools.mat=NULL
+new.nftools.pat=NULL
+
+for(i in 2:4){
+new.nftools.mat = rbind(new.nftools.mat,cbind(nftools.mat[match(old.nftools.mat[[i]]$twin1,nftools.mat$child),"Freq"],nftools.mat[match(old.nftools.mat[[i]]$twin2,nftools.mat$child),"Freq"],
+    nftools.mat[match(old.nftools.mat[[i]]$sib,nftools.mat$child),"Freq"]))
+new.nftools.pat = rbind(new.nftools.pat,cbind(nftools.pat[match(old.nftools.pat[[i]]$twin1,nftools.pat$child),"Freq"],nftools.pat[match(old.nftools.pat[[i]]$twin2,nftools.pat$child),"Freq"],
+    nftools.pat[match(old.nftools.pat[[i]]$sib,nftools.pat$child),"Freq"]))
+}
+        new.nftools.mat=new.nftools.mat[rowSums(is.na(new.nftools.mat))==0,]
+        new.nftools.pat=new.nftools.pat[rowSums(is.na(new.nftools.pat))==0,]
+
+        mat.pearson =compare.correlations.by.simulation(new.nftools.mat,"pearson",1000)
+        mat.spearman=compare.correlations.by.simulation(new.nftools.mat,"spearman",1000)
+        pat.pearson=compare.correlations.by.simulation(new.nftools.pat,"pearson",1000)
+                pat.spearman=compare.correlations.by.simulation(new.nftools.pat,"spearman",1000)
+                all.results=rbind(all.results,c(  mat.pearson,  mat.spearman,    pat.pearson,    pat.spearman))
+            
+  
+rownames(all.results)=c("old.QTR610","old.QTR370","old.NTR","new.NTR.v1","new.NTR.v2","new.QTR370","new.QTR610","new.NTRv2.QTR370.QTR610")
+#colnames(all.results)=c("mat.n","mat.pearson.corr","mat.pearson.p","mat.pearson.empirical.p" ,"mat.n","mat.spearman.corr","mat.spearman.p","mat.spearman.empirical.p","pat.n","pat.pearson.corr","pat.pearson.p",
+#            "pat.pearson.empirical.p","pat.n",            "pat.spearman.corr","pat.spearman.p","pat.spearman.empirical.p")
+colnames(all.results)=c("mat.n","mat.twin-twin.pearson.corr","mat.twin-twin.pearson.p",
+            "mat.twin1-sib.pearson.corr","mat.twin-twin_vs_twin1-sib.pearson.p",
+            "mat.twin2-sib.pearson.corr","mat.twin-twin_vs_twin2-sib.pearson.p",
+            "mat.n","mat.twin-twin.spearman.corr","mat.twin-twin.spearman.p",
+            "mat.twin1-sib.spearman.corr","mat.twin-twin_vs_twin1-sib.spearman.p",
+            "mat.twin2-sib.spearman.corr","mat.twin-twin_vs_twin2-sib.spearman.p",
+            "pat.n","pat.twin-twin.pearson.corr","pat.twin-twin.pearson.p",
+            "pat.twin1-sib.pearson.corr","pat.twin-twin_vs_twin1-sib.pearson.p",
+            "pat.twin2-sib.pearson.corr","pat.twin-twin_vs_twin2-sib.pearson.p",
+            "pat.n","pat.twin-twin.spearman.corr","pat.twin-twin.spearman.p",
+            "pat.twin1-sib.spearman.corr","pat.twin-twin_vs_twin1-sib.spearman.p",
+            "pat.twin2-sib.spearman.corr","pat.twin-twin_vs_twin2-sib.spearman.p")
+
+}
+
+write.table(all.results,"/home/hilary/maternal_age_recombination/interwin_correlation/correlations_between_twins_and_siblings_and_tests_for_difference.NFTOOLS.txt",quote=F,sep="\t")
+
+
+##use pairs of siblings from FC, GPC and VB as controls
+control.cohorts = rbind(all.events[[5]],all.events[[6]],all.events[[7]])
+
+control.cohorts[,1]=as.character(control.cohorts[,1])
+control.cohorts[,2]=as.character(control.cohorts[,2])
+
+control.cohorts=control.cohorts[control.cohorts$nkids>2,]
+control.cohorts$cohort.family=paste0(control.cohorts$cohort,"_",control.cohorts$family)
+
+control.cohorts.mat=control.cohorts[control.cohorts$sex=="female",]
+control.cohorts.pat=control.cohorts[control.cohorts$sex=="male",]
+
+
+fam.count=table(control.cohorts.pat$cohort.family)
+counts=control.cohorts.pat
+counts=counts[counts$cohort.family %in% names(fam.count[fam.count>2]),]
+families=unique(counts$cohort.family)
+
+sib.pair.correlations=c()
+sib.pair.correlations.one.per.fam=c()
+n=1000
+for(i in 1:n){
+sib1.pair.counts=NULL
+sib2.pair.counts=NULL
+sib1.pair.counts.one.per.fam=NULL
+sib2.pair.counts.one.per.fam=NULL
+
+for(f in 1:length(families)){
+    family.counts=counts[counts$cohort.family==families[f],]
+    pair.counts=family.counts[sample(1:nrow(family.counts),2,replace=F),]
+    sib1.pair.counts.one.per.fam=rbind(sib1.pair.counts.one.per.fam,pair.counts[1,c(1,7,3)])
+    sib2.pair.counts.one.per.fam=rbind(sib2.pair.counts.one.per.fam,pair.counts[2,c(1,7,3)])
+
+    while(nrow(family.counts)>2){
+        pair.counts=family.counts[sample(1:nrow(family.counts),2,replace=F),]
+        family.counts=family.counts[!family.counts[,1] %in% pair.counts[,1],]
+        sib1.pair.counts=rbind(sib1.pair.counts,pair.counts[1,c(1,7,3)])
+        sib2.pair.counts=rbind(sib2.pair.counts,pair.counts[2,c(1,7,3)])
+    }
+}
+sib.pair.correlations=rbind(sib.pair.correlations, c(nrow(sib2.pair.counts),cor(sib2.pair.counts[,3],sib1.pair.counts[,3],method="pearson")))
+sib.pair.correlations.one.per.fam=rbind(sib.pair.correlations.one.per.fam, c(nrow(sib2.pair.counts.one.per.fam),cor(sib2.pair.counts.one.per.fam[,3],sib1.pair.counts.one.per.fam[,3],method="pearson")))
+}
+sib.pair.correlations.pat=sib.pair.correlations
+sib.pair.correlations.one.per.fam.pat=sib.pair.correlations.one.per.fam
+
+twin.pat.correlations = as.data.frame(all.results[,c(15,16)])
+
+pvals=NULL
+smaller.correl=NULL
+
+for(i in 1:nrow(twin.pat.correlations)){
+cohort.pvals=c()
+for(j in 1:nrow(sib.pair.correlations.pat)){
+    x=cor.diff.test(twin.pat.correlations[i,2],sib.pair.correlations.pat[j,2],twin.pat.correlations[i,1],sib.pair.correlations.pat[j,1],alternative="less")
+    cohort.pvals=c(cohort.pvals,x)
+}
+smaller.correl=rbind(smaller.correl,sib.pair.correlations[,2] < twin.pat.correlations[i,2])
+pvals=rbind(pvals,cohort.pvals)
+}
+
+twin.pat.correlations$prop.random.sib.pairs.sig.lower = rowSums(pvals<0.05)/n
+twin.pat.correlations$prop.random.sib.pairs.lower =rowSums(smaller.correl)/n
+
+
+pvals=NULL
+smaller.correl=NULL
+for(i in 1:nrow(twin.pat.correlations)){
+cohort.pvals=c()
+for(j in 1:nrow(sib.pair.correlations.one.per.fam)){
+    x=cor.diff.test(twin.pat.correlations[i,2],sib.pair.correlations.one.per.fam[j,2],twin.pat.correlations[i,1],sib.pair.correlations.one.per.fam[j,1],alternative="less")
+    cohort.pvals=c(cohort.pvals,x)
+}
+smaller.correl=rbind(smaller.correl,sib.pair.correlations.one.per.fam[,2] < twin.pat.correlations[i,2])
+pvals=rbind(pvals,cohort.pvals)
+}
+
+twin.pat.correlations$prop.random.sib.pairs.sig.lower.one.per.fam = rowSums(pvals<0.05)/n
+twin.pat.correlations$prop.random.sib.pairs.lower.one.per.fam = rowSums(smaller.correl)/n
+
+###maternal
+fam.count=table(control.cohorts.mat$cohort.family)
+counts=control.cohorts.mat
+counts=counts[counts$cohort.family %in% names(fam.count[fam.count>2]),]
+families=unique(counts$cohort.family)
+
+sib.pair.correlations=c()
+sib.pair.correlations.one.per.fam=c()
+n=1000
+for(i in 1:n){
+sib1.pair.counts=NULL
+sib2.pair.counts=NULL
+sib1.pair.counts.one.per.fam=NULL
+sib2.pair.counts.one.per.fam=NULL
+
+for(f in 1:length(families)){
+    family.counts=counts[counts$cohort.family==families[f],]
+    pair.counts=family.counts[sample(1:nrow(family.counts),2,replace=F),]
+    sib1.pair.counts.one.per.fam=rbind(sib1.pair.counts.one.per.fam,pair.counts[1,c(1,7,3)])
+    sib2.pair.counts.one.per.fam=rbind(sib2.pair.counts.one.per.fam,pair.counts[2,c(1,7,3)])
+
+    while(nrow(family.counts)>2){
+        pair.counts=family.counts[sample(1:nrow(family.counts),2,replace=F),]
+        family.counts=family.counts[!family.counts[,1] %in% pair.counts[,1],]
+        sib1.pair.counts=rbind(sib1.pair.counts,pair.counts[1,c(1,7,3)])
+        sib2.pair.counts=rbind(sib2.pair.counts,pair.counts[2,c(1,7,3)])
+    }
+}
+sib.pair.correlations=rbind(sib.pair.correlations, c(nrow(sib2.pair.counts),cor(sib2.pair.counts[,3],sib1.pair.counts[,3],method="pearson")))
+sib.pair.correlations.one.per.fam=rbind(sib.pair.correlations.one.per.fam, c(nrow(sib2.pair.counts.one.per.fam),cor(sib2.pair.counts.one.per.fam[,3],sib1.pair.counts.one.per.fam[,3],method="pearson")))
+}
+sib.pair.correlations.mat=sib.pair.correlations
+sib.pair.correlations.one.per.fam.mat=sib.pair.correlations.one.per.fam
+
+
+twin.mat.correlations = as.data.frame(all.results[,c(1,2)])
+
+pvals=NULL
+smaller.correl=NULL
+for(i in 1:nrow(twin.mat.correlations)){
+cohort.pvals=c()
+for(j in 1:nrow(sib.pair.correlations.mat)){
+    x=cor.diff.test(twin.mat.correlations[i,2],sib.pair.correlations.mat[j,2],twin.mat.correlations[i,1],sib.pair.correlations.mat[j,1],alternative="less")
+    cohort.pvals=c(cohort.pvals,x)
+}
+smaller.correl=rbind(smaller.correl,sib.pair.correlations[,2] < twin.mat.correlations[i,2])
+pvals=rbind(pvals,cohort.pvals)
+}
+
+twin.mat.correlations$prop.random.sib.pairs.sig.lower = rowSums(pvals<0.05)/n
+twin.mat.correlations$prop.random.sib.pairs.lower =rowSums(smaller.correl)/n
+
+
+pvals=NULL
+smaller.correl=NULL
+for(i in 1:nrow(twin.mat.correlations)){
+cohort.pvals=c()
+for(j in 1:nrow(sib.pair.correlations.one.per.fam.mat)){
+    x=cor.diff.test(twin.mat.correlations[i,2],sib.pair.correlations.one.per.fam.mat[j,2],twin.mat.correlations[i,1],sib.pair.correlations.one.per.fam.mat[j,1],alternative="greater")
+    cohort.pvals=c(cohort.pvals,x)
+}
+smaller.correl=rbind(smaller.correl,sib.pair.correlations.one.per.fam.mat[,2] < twin.mat.correlations[i,2])
+pvals=rbind(pvals,cohort.pvals)
+}
+
+twin.mat.correlations$prop.random.sib.pairs.sig.lower.one.per.fam = rowSums(pvals<0.05)/n
+twin.mat.correlations$prop.random.sib.pairs.lower.one.per.fam = rowSums(smaller.correl)/n
+
+colnames(twin.mat.correlations)=paste0("mat.",colnames(twin.mat.correlations))
+colnames(twin.pat.correlations)=paste0("pat.",colnames(twin.pat.correlations))
+
+twin.correlations=cbind(twin.mat.correlations,twin.pat.correlations)
+write.table(twin.correlations,"/home/hilary/maternal_age_recombination/interwin_correlation/correlations_between_twins_tests_for_difference_between_that_and_random_siblings_from_other_FC_GPC_VB.NFTOOLS.txt",quote=F,sep="\t")
+

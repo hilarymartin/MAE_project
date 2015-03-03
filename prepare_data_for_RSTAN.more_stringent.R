@@ -26,6 +26,8 @@ age.files=c("CARL/clean-carl-flip_b37-related.with_parental_age.txt",
 names(age.files)=c("CARL","FC","FVG","GPC","NTR","ORCADES","QTR370","QTR610","VB","KORCULA","VIS")
 names(count.files)=names(age.files)
 
+removed = NULL
+
 family.type.count=NULL
 all.data0=list()
 for(i in 1:length(count.files)){
@@ -34,6 +36,7 @@ for(i in 1:length(count.files)){
     if(names(count.files)[i]=="FC"){
         age[,2] =gsub("-","_",age[,2])
     }
+counts=counts[!is.na(counts$sex),]	
     mat.counts=counts[counts$sex=="Female",]
     pat.counts=counts[counts$sex=="Male",]
     mat.counts.2=unique(mat.counts[,c("CHILD","PARENT","informative","informative.2gen.2parents","noninf.2kids.2gen.2parents")])
@@ -48,6 +51,8 @@ for(i in 1:length(count.files)){
     pat.counts$age.at.birth = age[match(pat.counts$CHILD,age$individual),"paternal_age"]
     cat(names(count.files)[i],"\t",nrow(mat.counts),"\t",nrow(pat.counts),"\n")
 #remove any with dodgy ages, or missing ages
+removed=rbind(removed,mat.counts[is.na(mat.counts$age.at.birth) |(!is.na(mat.counts$age.at.birth) & !( mat.counts$age.at.birth>12 & mat.counts$age.at.birth<50)),],
+pat.counts[is.na(pat.counts$age.at.birth) |(!is.na(pat.counts$age.at.birth) &!pat.counts$age.at.birth>12),]) 
     mat.counts=mat.counts[!is.na(mat.counts$age.at.birth) & mat.counts$age.at.birth>12 & mat.counts$age.at.birth<50,]
     pat.counts=pat.counts[!is.na(pat.counts$age.at.birth) & pat.counts$age.at.birth>12,]
     cat(names(count.files)[i],"\t",nrow(mat.counts),"\t",nrow(pat.counts),"\n")
@@ -55,6 +60,9 @@ for(i in 1:length(count.files)){
     counts$cohort=names(count.files)[i]
     all.data0[[i]]=counts
 }
+
+write.table(removed,"samples_removed_due_to_missing_or_suspicious_age_data.more_stringent.generr_removed.recombination_count.p_0.5.annotated.double_xovers_within_X_SNPs_removed.txt",quote=F,sep="\t")
+
 rownames(family.type.count)=names(age.files)
 colnames(family.type.count)= c("mother.inf","mother.inf.n.kids","mother.inf.min3kids","mother.inf.min3kids.n.kids","mother.noninf.2kids","mother.noninf.2kids.n.kids","father.inf","father.inf.n.kids","father.inf.min3kids",
             "father.inf.min3kids.n.kids",            "father.noninf.2kids","father.noninf.2kids.n.kids")
@@ -263,7 +271,7 @@ pat.cohort.count2 = table(data2.pat$cohort)
 mat.cohort.count.family2 = table(data2.unique.mat$cohort)
 pat.cohort.count.family2 = table(data2.unique.pat$cohort)
 
-family.type.count.multikid=rbind(mat.cohort.count2,mat.cohort.count.family2,pat.cohort.count2,pat.cohort.count.family2)
+family.type.count.multikid=data.frame(rbind(mat.cohort.count2,mat.cohort.count.family2,pat.cohort.count2,pat.cohort.count.family2))
                                         #only keep cohorts with more than 20
 data2.mat=data2.mat[data2.mat$cohort.family.type %in% names(mat.cohort.count[mat.cohort.count>20]),]
 data2.pat=data2.pat[data2.pat$cohort.family.type %in% names(pat.cohort.count[pat.cohort.count>20]),]
@@ -283,6 +291,21 @@ pat.family.type.count.multikid.no.small =rbind(pat.cohort.count2.no.small ,pat.c
 rowSums(mat.family.type.count.multikid.no.small)
 rowSums(pat.family.type.count.multikid.no.small)
 
+rownames(family.type.count.multikid) = c("mat.n.kids","mat.n.fams","pat.n.kids","pat.n.fams")
+rownames(family.type.count.inf) = c("mat.n.kids","mat.n.fams","pat.n.kids","pat.n.fams")
+rownames(family.type.count.inf.nuc) = c("mat.n.kids","mat.n.fams","pat.n.kids","pat.n.fams")
+
+family.type.count.multikid$total=rowSums(family.type.count.multikid)
+family.type.count.multikid$total.without.gpc = rowSums(family.type.count.multikid[,c("CARL" ,"FC", "FVG","KORCULA","NTR","ORCADES","QTR370","QTR610","VB","VIS")])
+
+family.type.count.multikid$total.no.small=c(rowSums(mat.family.type.count.multikid.no.small),rowSums(pat.family.type.count.multikid.no.small))
+family.type.count.multikid$total.no.small.without.gpc = c(rowSums(mat.family.type.count.multikid.no.small[,c("CARL" ,"FC", "FVG","NTR","ORCADES","QTR370","QTR610","VB")]),
+  rowSums(pat.family.type.count.multikid.no.small[,c("FC", "FVG","NTR","ORCADES","QTR370","QTR610","VB")]))
+
+write.table(family.type.count.multikid,"number_of_duos_by_cohorts.families_with_multiple_children.txt",quote=F,sep="\t")
+write.table(family.type.count.inf,"number_of_duos_by_cohorts.informative_duos.txt",quote=F,sep="\t")
+write.table(family.type.count.inf.nuc,"number_of_duos_by_cohorts.informative_nuc_fam_duos.txt",quote=F,sep="\t")
+
 
                                         #> dim(data2.mat) --> with NTR v1
 #1] 3589   21
@@ -297,14 +320,6 @@ colnames(pat.key.model3)=c("Code","Cohort")
 write.table(mat.key.model3,"RSTAN_output/key_for_maternal_cohorts_to_include_in_model_3.more_stringent.txt",quote=F,sep="\t",row.names=F)
 write.table(pat.key.model3,"RSTAN_output/key_for_paternal_cohorts_to_include_in_model_3.more_stringent.txt",quote=F,sep="\t",row.names=F)
 
-
-rownames(family.type.count.multikid) = c("mat.n.kids","mat.n.fams","pat.n.kids","pat.n.fams")
-rownames(family.type.count.inf) = c("mat.n.kids","mat.n.fams","pat.n.kids","pat.n.fams")
-rownames(family.type.count.inf.nuc) = c("mat.n.kids","mat.n.fams","pat.n.kids","pat.n.fams")
-
-write.table(family.type.count.multikid,"number_of_duos_by_cohorts.families_with_multiple_children.txt",quote=F,sep="\t")
-write.table(family.type.count.inf,"number_of_duos_by_cohorts.informative_duos.txt",quote=F,sep="\t")
-write.table(family.type.count.inf.nuc,"number_of_duos_by_cohorts.informative_nuc_fam_duos.txt",quote=F,sep="\t")
 
 ##need to alter this to include ORCADES
 mat.beta.parameters=read.delim("parameters_for_beta_distribution.model3_maternal.more_stringent.txt",header=T)[,1:5]

@@ -1,0 +1,152 @@
+# Nov. 28 2014
+
+data<-read.table("/gpfs1/well/donnelly/hilary/maternal_age_and_recombination/maternal_crossovers.informative_meioses.with_twins_indicated.txt",
+                 header=T,colClasses=c("character","character","numeric","numeric","character","character"))
+count.parent=table(data$PARENT)
+data=data[!data$PARENT %in% names(count.parent[count.parent==1]),]
+data=data[order(data$PARENT),]
+                                        #dim(data[which(!is.na(data$other.twin)),])
+#table(data$cohort)
+# We extract the data from the 3 twin cohorts yielding dataset with 1327 births out of 2188 in the full dataset
+#sum(data$cohort%in%list("QTR610","QTR370","NTR","GPC"))
+
+Q<-data[c(which(data$cohort=="QTR610"),which(data$cohort=="QTR370"),which(data$cohort=="NTR")),]
+#lm(Q$n.crossovers~Q$cohort)
+P<-matrix(0,nrow=nrow(Q),ncol=nrow(Q))
+#model.matrix(Q$cohort)
+#as.numeric(Q$cohort=="QTR610")
+#head(Q,20)
+N<-nrow(Q)
+
+D<-diag(N)
+#eed to construct three incidence matricies determining where in the covariance matrix the various parameters must go.
+P<-matrix(0,nrow=nrow(Q),ncol=nrow(Q))
+for(j in 1:nrow(Q)) P[j,]<-as.numeric(Q$PARENT==Q$PARENT[j])
+#pdf("matrix_showing_siblings_in_QTR_and_NTR_datasets.pdf")
+#image(P)
+#dev.off()
+
+Tw<-matrix(0,nrow=nrow(Q),ncol=nrow(Q))
+for(j in 1:nrow(Q)) Tw[j,]<-as.numeric(Q$CHILD==Q$other.twin[j])
+Tw[is.na(Tw)]<-0
+M=Tw+P
+if(FALSE){
+pdf("matrix_showing_twins_in_QTR_and_NTR_datasets.pdf")
+image(Tw)
+dev.off()
+
+
+
+#     CHILD      PARENT n.crossovers age.at.birth cohort  other.twin
+data1.mat2=list(y=Q$n.crossovers,cohort=as.integer(as.factor(Q$cohort)),family=as.integer(as.factor(Q$PARENT)),Age=as.numeric(Q$age.at.birth),J=nrow(Q),I=length(unique(Q$PARENT)),
+    C =length(unique(Q$cohort)),P=P,Tw=Tw,D=D)
+
+data<-read.table("/gpfs1/well/donnelly/hilary/maternal_age_and_recombination/paternal_crossovers.informative_meioses.with_twins_indicated.txt",
+                                  header=T,colClasses=c("character","character","numeric","numeric","character","character"))
+count.parent=table(data$PARENT)
+data=data[!data$PARENT %in% names(count.parent[count.parent==1]),]
+
+data=data[order(data$PARENT),]
+Q<-data[c(which(data$cohort=="QTR610"),which(data$cohort=="QTR370"),which(data$cohort=="NTR")),]
+N<-nrow(Q)
+P<-matrix(0,nrow=nrow(Q),ncol=nrow(Q))
+for(j in 1:nrow(Q)) P[j,]<-as.numeric(Q$PARENT==Q$PARENT[j])
+Tw<-matrix(0,nrow=nrow(Q),ncol=nrow(Q))
+for(j in 1:nrow(Q)) Tw[j,]<-as.numeric(Q$CHILD==Q$other.twin[j])
+Tw[is.na(Tw)]<-0
+M=Tw+P
+
+pdf("matrix_showing_sibs_and_twins_in_QTR_and_NTR_datasets.father.pdf")
+image(M)
+dev.off()
+
+data1.pat2=list(y=Q$n.crossovers,cohort=as.integer(as.factor(Q$cohort)),family=as.integer(as.factor(Q$PARENT)),Age=as.numeric(Q$age.at.birth),J=nrow(Q),I=length(unique(Q$PARENT)),
+    C =length(unique(Q$cohort)),P=P,Tw=Tw,D=D)
+
+save.image("duoHMM_data_for_RSTAN.more_stringent.twin_cohorts_inc_family_matrix.RData")
+}
+#image(Tw)
+#Tw[1:30,1:30]+P[1:30,1:30]
+
+D<-diag(N)
+
+Y<-Q$n.crossovers
+X<-cbind(as.numeric(Q$cohort=="QTR610"),as.numeric(Q$cohort=="QTR370"),as.numeric(Q$cohort=="NTR"),Q$age.at.birth)
+
+load("RSTAN_output_on_duoHMM_more_stringent/model1.62/model1.6.2.maternal.mu_m_N_41_100.sigmasq_m_IG_2_40.best_draw.RData")
+
+key=read.delim("RSTAN_output/key_for_maternal_cohorts_to_include_in_model_1.more_stringent.txt",header=T)
+ names(best.draw$mu_m)=key$Cohort
+ names(best.draw$sigmasq_m)=key$Cohort
+
+require(Matrix)
+require(mvtnorm)
+
+###should change this so there's a different sigmasq_alpha for each cohort
+loglik0<-function(v,X,Y,D,Tw,P){
+  tau<-v[1]
+  sigma<-v[2]
+  cov<-D*tau+P*sigma
+  return(-dmvnorm(Y,X%*%v[3:length(v)],sigma=cov,log=T))
+}
+
+loglik2<-function(v,X,Y,D,Tw,P){
+  lambda<-v[1]
+  tau<-v[2]
+  sigma<-v[3]
+  cov<-(D+lambda*Tw)*tau+P*sigma
+  return(-dmvnorm(Y,X%*%v[4:length(v)],sigma=cov,log=T))
+}
+#optimise log likelihood
+#gives trace, reports every iteration
+trial0<-optim(par=c(best.draw$tausq,mean(best.draw$sigmasq_m[c("QTR610","QTR370","NTR")]),best.draw$mu_m["QTR610"],best.draw$mu_m["QTR370"],best.draw$mu_m["NTR"],best.draw$beta_Age),loglik0,X=X,
+                Y=Y,      D=D,Tw=Tw,P=P,method="L-BFGS-B",lower=c(0.1,0.1,-Inf,-Inf,-Inf,-Inf),upper=c(100,100,Inf,Inf,Inf,Inf,), control=list(trace=1,REPORT=1),hessian=T)
+trial0
+sqrt(solve(trial0$hessian)[8,8])#standard error estimate on beta
+
+trial2<-optim(par=c(0.01286601,best.draw$tausq,mean(best.draw$sigmasq_m[c("QTR610","QTR370","NTR")]),best.draw$mu_m["QTR610"],best.draw$mu_m["QTR370"],best.draw$mu_m["NTR"],best.draw$beta_Age),
+                loglik2,X=X,Y=Y,D=D,Tw=Tw,P=P,method="L-BFGS-B",lower=c(0,0.1,0.1,-Inf,-Inf,-Inf,-Inf),upper=c(1,100,100,Inf,Inf,Inf,Inf),control=list(trace=1,REPORT=1),hessian=T)
+trial2
+solve(trial2$hessian)
+trial0
+save.image("testing_twin_model.LRT.RData")
+
+if(FALSE){
+loglik<-function(v,X,Y,D,Tw,P){
+  lambda<-v[1]
+  tau<-v[2]
+  sigma<-v[3]
+  cov<-(D+lambda*Tw)*tau+P*sigma
+  G<-Matrix::solve(Matrix::chol(cov))
+  y<-G%*%Y
+  x<-G%*%X
+  f<-y-x%*%Matrix::solve(t(x)%*%x)%*%t(x)%*%y
+  return(t(f)%*%f)
+}
+
+loglik<-function(v,X,Y,D,Tw,P){
+  lambda<-v[1]
+  tau<-v[2]
+  sigma<-v[3]
+  cov<-(D+lambda*Tw)*tau+P*sigma
+  G<-Matrix::solve(Matrix::chol(cov))
+  y<-G%*%Y
+  x<-G%*%X
+  f<-y-x%*%Matrix::solve(t(x)%*%x)%*%t(x)%*%y
+  return(t(f)%*%f)
+}
+
+trial1<-optim(par=c(.5,10,1),loglik,X=X,Y=Y,D=D,Tw=Tw,P=P,method="L-BFGS-B",lower=c(0.1,0,0),upper=c(1,100,100))
+trial1
+trial1<-optim(par=c(.5,10,1),loglik,X=X,Y=Y,D=D,Tw=Tw,P=P,method="L-BFGS-B",lower=c(0.1,0,0),upper=c(10,10,10))
+trial1
+loglik(c(.001,1,.7),X,Y,D,Tw,P)
+
+
+
+
+}
+
+
+
+

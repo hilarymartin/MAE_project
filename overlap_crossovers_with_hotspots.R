@@ -3,9 +3,19 @@
 library(GenomicRanges)
 options(echo=TRUE) # if you want see commands in output file
 args <- commandArgs(trailingOnly = TRUE)
-out.prefix = args[1]
-recomb.file=args[2]
-hotspot.file=args[3]
+out.prefix = args[2]
+recomb.file=args[1]
+if(out.prefix %in% c("FC","QTR610","QTR370")){
+  hotspot.file="hotspots_from_Anjali.hg18.plus_1.bed"
+} else {
+  hotspot.file  = "hotspots_from_Anjali.lifted_to_hg19.bed"
+}
+
+#hotspot.file=args[3]
+
+print(args[1])
+print(args[2])
+print(hotspot.file)
 
 hg18.hotspots=read.delim(hotspot.file,header=F,stringsAsFactors=F)
 
@@ -14,7 +24,7 @@ hotspots=GRanges(seqnames=hg18.hotspots[,1],ranges=IRanges(start=hg18.hotspots[,
 duoHMM.all=read.delim(recomb.file,header=T,stringsAsFactors=F)
 duoHMM.all$chr=paste0("chr",duoHMM.all$chr)
 
-sizes=c(max(duoHMM.all$END-duoHMM.all$START) + 1,100000,50000,30000,20000,10000,5000)
+#sizes=c(max(duoHMM.all$END-duoHMM.all$START) + 1,100000,50000,30000,20000,10000,5000)
 sizes=c(max(duoHMM.all$END-duoHMM.all$START) + 1,60000,50000,40000,30000,20000)
 #sizes=c(30000)
 
@@ -58,10 +68,9 @@ conf.int.upper=alpha.grid[conf.interval[length(conf.interval)]]
 overlap.stats=rbind(overlap.stats,c(nrow(duoHMM.resolved),nrow(duoHMM.resolved)/nrow(duoHMM.all),total.true.overlapping,prop.true.overlapping,mean.prop.overlapping,actual.prop.in.hotspots,MLE.alpha,conf.int.lower,conf.int.upper))
 }
 
-
 overlap.stats=data.frame(overlap.stats)
 colnames(overlap.stats)=c("n.crossovers","prop.all.crossovers","n.overlapping.hotspots","prop.overlapping.hotspots","prop.overlapping.hotspots.by.chance","alpha.Bleazard","alpha.Coop","alpha.Coop.95pc.lower","alpha.Coop.95pc.upper")
 #overlap.stats$resolution=c("all","100kb","50kb","30kb","20kb","10kb","5kb")
 overlap.stats$resolution=sizes
 
-write.table(overlap.stats,paste0(out.prefix,".overlap_with_hotspots.txt"),quote=F,sep="\t")
+write.table(overlap.stats,paste0("hotspot_overlap/",out.prefix,".overlap_with_hotspots.txt"),quote=F,sep="\t")

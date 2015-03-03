@@ -7,7 +7,8 @@ argv <- commandArgs(TRUE)
 #    "QTR/input_for_SHAPEIT2/QTR_minus_MZs.370K.1.post_MERLIN.more_stringent.generr_removed.map","QTR370","QTR")
 #argv=c("FC/duoHMM_results/FC.1.more_stringent.generr_removed.recombinations.txt","FC/input_for_SHAPEIT2/FC.1.more_stringent.generr_removed.fam","qqplots_duoHMM_v3/FC.more_stringent",
 #    "FC/input_for_SHAPEIT2/FC.1.more_stringent.generr_removed.map","FC","FC")
-
+#argv=c("QTR/duoHMM_results/all_QTR_370K_samples.1.post_MERLIN.more_stringent.generr_removed.recombinations.txt","QTR/input_for_SHAPEIT2/all_QTR_370K_samples.1.post_MERLIN.more_stringent.generr_removed.fam","qqplots_duoHMM_v3/all_QTR_370K_samples.more_stringent",
+#"QTR/input_for_SHAPEIT2/all_QTR_370K_samples.1.post_MERLIN.more_stringent.generr_removed.map","all_QTR370","QTR")
 
 threshold=0.5
 thr <- 1E6 #recombinations within this distance of one another are filtered
@@ -55,7 +56,7 @@ tabulateRecombination <- function(r,keep) {
     rec
 }
 
-#if(FALSE){
+
 
 fam.file=argv[2]
 
@@ -135,6 +136,11 @@ mean.snp.space=sum(as.numeric(total.SNPs))/sum(as.numeric(total.dist))
 
                                         #threshold for number of SNPs between adjacent crossovers - this corrects for SNP density, so we are not biased towards removing double crossovers in regions with denser SNPs
 n.snps.threshold= round(thr * mean.snp.space)
+
+cat("n SNPs within 1Mb:",n.snps.threshold,"\n")
+
+if(FALSE){
+
 n.snps.threshold.male= round(male.thr * mean.snp.space)
 
 
@@ -162,7 +168,6 @@ remove.outliers=function(r,cohort){
        r=r[!r[,2] %in% fam[fam[,1] %in% c("10689", "11880"),2],]
     }
     if(cohort=="GPC"){
-       #remove dodgy family 188 (mother APP5117398, father APP5117401 or    APP5117402_dummyfather from GPC; think relationships are mis-specified
         r=r[r$PARENT!="APP5117398" & r$PARENT !="APP5117401",]
     }
     return(r)
@@ -197,70 +202,6 @@ r$noninf.1kid.2gen.2parents <- !fam[match(r$PARENT,fam$V2),]$grandparent & fam[m
 #1 kid with same mother but father missing for all; only two generations
 r$noninf.1kid.2gen.1parent <- !fam[match(r$PARENT,fam$V2),]$grandparent & fam[match(r$PARENT,fam$V2),]$nkid==1 & r$CHILD %in% fam[fam[,3]=="0"|fam[,4]=="0",2] &
     (r$CHILD %in% fam[fam$total_same_parents==fam$total_same_mother,2]|r$CHILD %in% fam[fam$total_same_parents==fam$total_same_father,2])
-
-#1 or both maternal grandparents
-r$informative.3gen = fam[match(r$PARENT,fam$V2),]$grandparent 
-#1 or both maternal grandparents, both parents same and genotyped
-r$informative.3gen.2parents = fam[match(r$PARENT,fam$V2),]$grandparent & !r$CHILD %in% fam[fam[,3]=="0"|fam[,4]=="0",2] & r$CHILD %in% fam[fam$total_same_parents==fam$total_same_mother,2]
-#1 or both maternal grandparents, father missing
-r$informative.3gen.1parent = fam[match(r$PARENT,fam$V2),]$grandparent & r$CHILD %in% fam[fam[,3]=="0"|fam[,4]=="0",2] &
-    (r$CHILD %in% fam[fam$total_same_parents==fam$total_same_mother,2]|r$CHILD %in% fam[fam$total_same_parents==fam$total_same_father,2])
-
-
-r.old=r
-r=remove.outliers(r,cohort)
-
-r$dummy=rep(TRUE,nrow(r))
-                                        #calculate distance to nearest crossover
-r$diff <- c(NA,tail(r$END,-1) - head(r$START,-1))
-#set distance to NA if the adjacent rows are not the same chromosome, child or parent
-r$diff[c(FALSE,tail(r$chr,-1) != head(r$chr,-1)) | c(FALSE,tail(r$CHILD,-1) != head(r$CHILD,-1)) | c(FALSE,tail(r$PARENT,-1) != head(r$PARENT,-1))] <- NA
-#remove double crossovers within the specified distance
-r.flt <- r[-c(which(r$diff<thr),which(r$diff<thr)-1),]
-
-r.double.xovers.within.N.Mb <- r[c(which(r$diff<thr),which(r$diff<thr)-1),]
-
-#calculate distance to nearest crossover, in number of SNPs
-r$SNP.diff <- c(NA,tail(r$END.SNP.n,-1) - head(r$START.SNP.n,-1))
-#set distance to NA if the adjacent rows are not the same chromosome, child or parent
-r$SNP.diff[c(FALSE,tail(r$chr,-1) != head(r$chr,-1)) | c(FALSE,tail(r$CHILD,-1) != head(r$CHILD,-1)) | c(FALSE,tail(r$PARENT,-1) != head(r$PARENT,-1))] <- NA
-#remove double crossovers within the specified distance
-r.flt1 <- r[-c(which(r$SNP.diff<n.snps.threshold),which(r$SNP.diff<n.snps.threshold)-1),]
-r.double.xovers.within.X.SNPs <- r[c(which(r$SNP.diff<n.snps.threshold),which(r$SNP.diff<n.snps.threshold)-1),]
-
-#pull out any crossovers that are duplicated within or across families
-dup.pos <- r[which(duplicated(r[,c("chr","START","END")])),c("chr","START","END")]
-dup.pos$xover=paste(dup.pos$chr,dup.pos$START,dup.pos$END,sep="_")
-#remove these
-r$xover=paste(r$chr,r$START,r$END,sep="_")
-r.flt2 <- r[!r$xover %in% dup.pos$xover,]
-#r.flt2 <- r[-which(r$START%in%dup.pos[,2] & r$END%in%dup.pos[,3] & r$chr%in%dup.pos[,1]),]
-r.dup.pos <- r[r$xover %in% dup.pos$xover,]
-
-#pull out any crossovers that are duplicated within families
-r$father=fam[match(r$CHILD,fam[,2]),3]
-r$mother=fam[match(r$CHILD,fam[,2]),4]
-
-funny.families=r.old[!r.old$duo %in% r$duo,]
-if(nrow(funny.families)>0){
-funny.families$dummy=TRUE
-funny.families.rec=tabulateRecombination(funny.families,"dummy")
-funny.families.rec=funny.families.rec[order(funny.families.rec$CHILD,funny.families.rec$sex),]
-print(funny.families)
-write.table(funny.families.rec,paste0(argv[3],"_dodgy_families_removed.raw_crossover_counts.txt"),row.names=F,quote=F,sep="\t")
-}
-
-
-dup.pos.within.fam <- r[which(duplicated(r[,c("chr","START","END","father","mother")])),c("chr","START","END","father","mother")]
-dup.pos.within.fam$xover=paste(dup.pos.within.fam$chr,dup.pos.within.fam$START,dup.pos.within.fam$END,dup.pos.within.fam$father,dup.pos.within.fam$mother,sep="_")
-r$xover2=paste(r$chr,r$START,r$END,r$father,r$mother,sep="_")
-r.flt3 <- r[!r$xover2 %in% dup.pos.within.fam$xover,]
-r.dup.pos.within.fam  <- r[r$xover2 %in% dup.pos.within.fam$xover,]
-
-#after removal of double crossovers within X SNPs, pull out any that are duplicated within or across families
-dup.pos2 <- r.flt1[which(duplicated(r.flt1[,c("chr","START","END")])),c("chr","START","END")]
-dup.pos2$xover=paste(dup.pos2$chr,dup.pos2$START,dup.pos2$END,sep="_")
-#remove these
 r.flt1$xover=paste(r.flt1$chr,r.flt1$START,r.flt1$END,sep="_")
 r.flt1.2 <- r.flt1[!r.flt1$xover %in% dup.pos2$xover,]
 r.dup.pos.2 <- r.flt1[r.flt1$xover %in% dup.pos2$xover,]
@@ -290,6 +231,7 @@ freq.duplicate.xovers.after.double.xover.removal=plot.outlier.snps(r.dup.pos.2,m
 freq.duplicate.xovers.within.fam=plot.outlier.snps(r.dup.pos.within.fam,maps,paste0(argv[3],".frequency_of_duplicate_crossovers_within_fam.pdf"),0.999)
 freq.double.xovers.within.X.SNPs=plot.outlier.snps(r.double.xovers.within.X.SNPs,maps,paste0(argv[3],".frequency_of_double_crossovers_within_X_SNPs.pdf"),0.999)
 freq.double.xovers.within.N.Mb = plot.outlier.snps(r.double.xovers.within.N.Mb,maps,paste0(argv[3],".frequency_of_double_crossovers_within_",thr/1E6,"Mb.pdf"),0.999)
+
 
 library(GenomicRanges)
 
@@ -386,8 +328,9 @@ male.lower.limit=9
 outliers = rec.flt1.all[((rec.flt1.all$sex=="Female" & (rec.flt1.all$rec >female.upper.limit | rec.flt1.all$rec < female.lower.limit))|(rec.flt1.all$sex=="Male" & (rec.flt1.all$rec >male.upper.limit | rec.flt1.all$rec < male.lower.limit))) &
                             (rec.flt1.all$informative.2gen.2parents |rec.flt1.all$informative.3gen.2parents),]
 print(outliers)
-write.table(outliers,paste0(argv[3],"_outliers.no_double_crossovers_within_X_SNPsxt"),row.names=F,quote=F,sep="\t")
-if(FALSE){
+write.table(outliers,paste0(argv[3],"_outliers.no_double_crossovers_within_X_SNPs.txt"),row.names=F,quote=F,sep="\t")
+
+
                                         #no duplicate crossovers within or between families
 rec.flt2.all <- tabulateRecombination(r.flt2,"dummy")
 #no duplicate crossovers within families
@@ -396,9 +339,6 @@ rec.flt3.all <- tabulateRecombination(r.flt3,"dummy")
 rec.flt4.all <- tabulateRecombination(r.excl.windows.of.double.xovers.within.X.SNPs,"dummy")
 #remove crossovers in clusters of duplicate crossovers, after removing crossovers within X SNPs
 rec.flt5.all <- tabulateRecombination(r.excl.windows.of.duplicate.xovers.after.double.xovers.removal,"dummy")
-
-
-
 
 r.flt1=r.flt1[!r.flt1$duo %in% outliers$duo,]
 rec=rec[!rec$duo %in% outliers$duo,]
@@ -483,7 +423,6 @@ colnames(stats)=c("cohort","sex",sapply(c("all","no_double_xovers_within_N_MB","
 
 write.table(stats,paste0(argv[3],"_summary.different_filtering_strategies.informative_families_only.txt"),row.names=F,quote=F,sep="\t")
 
-
 write.table(rec,gsub("recombinations","recombination_count.informative_duos_only.p_0.5.annotated",gsub("1.","all.",argv[1],fixed=T)),quote=F,sep="\t",row.names=F)
 write.table(rec.flt1,gsub("recombinations","recombination_count.informative_duos_only.p_0.5.annotated.double_xovers_within_X_SNPs_removed",gsub("1.","all.",argv[1],fixed=T)),quote=F,sep="\t",row.names=F)
 write.table(rec.flt2,gsub("recombinations","recombination_count.informative_duos_only.p_0.5.annotated.duplicate_xovers_removed",gsub("1.","all.",argv[1],fixed=T)),quote=F,sep="\t",row.names=F)
@@ -492,15 +431,14 @@ write.table(rec.flt5,gsub("recombinations","recombination_count.informative_duos
 
 #### Make QQ plots for different filtering schemes
 #stopifnot(nrow(rec)>0)
-if(FALSE){
-if(nrow(rec)>0){
+
+
 print("QQ-PLOT")
 pdf(paste0(argv[3],"-qq.pdf"),width=12,height=6)
 #par(mar=c(2,2,1,1),mfrow=c(1,2),cex=1.6,oma=c(2,2,0,0))
 par(mar=c(2,2,1,1),mfrow=c(1,2),cex=1,oma=c(2,2,0,0))
-tmp <- qqr(subset(rec,sex=="Male")$nrec,malesize,cols[1],title=paste(argv[5]," paternal"),
-#           limits=range(c(subset(rec,sex=="Male")$nrec,subset(rec.flt,sex=="Male")$nrec,subset(rec.flt1,sex=="Male")$nrec,subset(rec.flt2,sex=="Male")$nrec)),xlowerlimit=10)
-                      limits=range(9,45),xlowerlimit=10)
+tmp <- qqr(subset(rec,sex=="Male")$nrec,malesize,cols[1],title=paste(argv[5]," paternal"),                      limits=range(9,45),xlowerlimit=10)
+
 points(jitter(qqr(subset(rec.flt2,sex=="Male")$nrec,malesize,makeplot=0)),pch=16,col=cols[3])
 points(jitter(qqr(subset(rec.flt3,sex=="Male")$nrec,malesize,makeplot=0)),pch=16,col=cols[4])
 points(jitter(qqr(subset(rec.flt5,sex=="Male")$nrec,malesize,makeplot=0)),pch=16,col=cols[5])
@@ -516,8 +454,6 @@ points(jitter(qqr(subset(rec.flt1,sex=="Female")$nrec,femalesize,makeplot=0)),pc
 mtext("Expected recombinations genome-wide",1,outer=T,cex=1.6,padj=1.7)
 mtext("Observed recombinations genome-wide",2,outer=T,cex=1.6,padj=-1)
 dev.off()
-}
-}
 
 rec.flt1.all= tabulateRecombination(r.flt1,"dummy")
 rec.flt1.informative.2gen = tabulateRecombination(r.flt1,"informative.2gen")
@@ -534,6 +470,8 @@ rec.flt1.informative.3gen.1parent = tabulateRecombination(r.flt1,"informative.3g
 
 
 ####for some reason this is just not working - some files are only writing out the header, even though the data.frame should be nonempty. Maybe some R buffering issue?
+cat("Writing tables\n")
+write.table(rec.all,gsub("recombinations","recombination_count.all_duos.p_0.5.annotated",gsub("1.","all.",argv[1],fixed=T)),quote=F,sep="\t",row.names=F)
 cat("Writing tables\n")
 write.table(rec.flt1.all,gsub("recombinations","recombination_count.all_duos.p_0.5.annotated.double_xovers_within_X_SNPs_removed",gsub("1.","all.",argv[1],fixed=T)),quote=F,sep="\t",row.names=F)
 #flush.console()
@@ -563,8 +501,7 @@ write.table(rec.flt1.noninf.1kid.2gen.1parent,gsub("recombinations","recombinati
 #flush.console()
 cat("Writing tables\n")
 save.image(paste0(argv[3],".multiple_filters.RData"))  
-if(FALSE){
-if(FALSE){
+
 cohort.stats=c(argv[5],"male")
 if(nrow(subset(rec.flt1.all,sex=="Male"))>0){
     total=subset(rec.flt1.all,sex=="Male")$nrec
@@ -659,8 +596,6 @@ write.table(stats,paste0(argv[3],"_summary.different_family_types.X_SNPs_apart_f
 mycols=c("darkgreen","green","red3","red","purple","purple3","orange","orange2")
 mypch=c(21,24,21,24,21,24,21,24)
 
-}
-if(FALSE){
 print("QQ-PLOT")
 pdf(paste0(argv[3],"-qq_by_family_type.X_SNPs_apart_filtered.pdf"),width=12,height=6)
 par(mar=c(2,2,1,1),mfrow=c(1,2),cex=1,oma=c(2,2,0,0))
@@ -690,7 +625,7 @@ if(nrow(subset(rec.flt1.informative.3gen.1parent,sex=="Female"))>0){points(jitte
    mtext("Expected recombinations genome-wide",1,outer=T,cex=1.6,padj=1.7)
 mtext("Observed recombinations genome-wide",2,outer=T,cex=1.6,padj=-1)
 dev.off()
-#}
+
 
 ####histograms
 pdf(paste0(argv[3],"-histograms_by_family_type.X_SNPs_apart_filtered.pdf"),width=8,height=8)
@@ -725,7 +660,7 @@ abline(v=mean(subset(rec.flt1.informative.2gen.2parents,sex=="Female")$nrec),col
 }                                                                      
                                                                   
 dev.off()
-}
+
 if(FALSE){
 if(nrow(subset(rec.flt1.informative.2gen.1parent,sex=="Male"))>0){points(jitter(qqr(subset(rec.flt1.informative.2gen.1parent,sex=="Male")$nrec,malesize,makeplot=0)),pch=mypch[2],col=mycols[2],bg=mycols[2])}
 if(nrow(subset(rec.flt1.noninf.2kids.2gen.1parent,sex="Male"))>0){points(jitter(qqr(subset(rec.flt1.noninf.2kids.2gen.1parent,sex=="Male")$nrec,malesize,makeplot=0)),pch=mypch[4],col=mycols[4],bg=mycols[4])}
@@ -786,6 +721,4 @@ mtext("Observed recombinations per chromosome",2,outer=T,cex=1.6,padj=-1)
 dev.off()
 }
 }
-#save.image(paste0(argv[3],".multiple_filters.RData"))
-}                                        #save.image(paste0(argv[3],".RData"))
 }

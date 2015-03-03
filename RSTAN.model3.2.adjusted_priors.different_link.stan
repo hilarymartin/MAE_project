@@ -8,8 +8,8 @@
     int cohort[J];//which cohort (0=QTR,1=NTR)
     real alpha_parameters[C]; //alpha parameter for beta distributions that are the prior for p(observed crossover|true crossovers)
     real beta_parameters[C]; //beta parameter for beta distributions that are the prior for p(observed crossover|true crossovers)
-real mu_alpha_prior;	     
-real<lower=0> sigmasq_alpha_prior;
+    real mu_alpha_prior;	     
+    real<lower=0> sigmasq_alpha_prior;
   }
   parameters {
     vector[I] exp_a0; // random effect of mothers 
@@ -38,7 +38,8 @@ real<lower=0> sigmasq_alpha_prior;
        p_by_cohort[c] ~ beta(alpha_parameters[c],beta_parameters[c]);
     }
     mu_m ~ normal(mu_alpha_prior,sqrt(sigmasq_alpha_prior)); //smaller since baseline is now exp(0.1*mu_m)	
-    sigmasq_m ~ inv_gamma(11,2); //want the mean of this to be about 0.2
+//    sigmasq_m ~ inv_gamma(11,2); //want the mean of this to be about 0.2
+    sigmasq_m ~ inv_gamma(3,0.01);
 
     inv_omega ~ uniform(0,1);
 

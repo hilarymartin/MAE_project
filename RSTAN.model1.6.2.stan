@@ -36,7 +36,7 @@ data {
 
     mu_m ~ normal(mean_alpha_prior,sigmasq_mu_m_prior);
     for(c in 1:C){    
-//       sigmasq_m[c] ~ inv_gamma(5,10);//this is the variance of a0
+       sigmasq_m[c] ~ inv_gamma(sigmasq_m_alpha,sigmasq_m_beta);//this is the variance of a0
     }
    for(i in 1:I){ //random effects of the families
       a0[i] ~ normal(mu_m[cohort_by_family[i]],sqrt(sigmasq_m[cohort_by_family[i]]));

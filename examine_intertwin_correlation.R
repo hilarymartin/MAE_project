@@ -15,7 +15,8 @@ for(i in 1:length(age.files)){
     ages$count=counts[ages$unique.id]
    
     twins=ages[ages$count==2 & !(ages$father == "0" & ages$mother=="0"),]
-    twins=twins[order(twins$family),]
+#    twins=twins[order(twins$family),]
+    twins=twins[order(twins$mother),] #need to order this way else we get errors for families with >1 pair of twins
     
     twin1=twins[1:nrow(twins) /2 -1:nrow(twins)%/% 2==0.5,]
     twin2=twins[1:nrow(twins) /2 -1:nrow(twins)%/% 2==0,]
@@ -131,6 +132,132 @@ for(i in 1:length(twin.info)){
 twin.rec.info[[i]]=twins    
 }
 names(twin.rec.info) = c("NTR","QTR370","QTR610")
+
+
+save(twin.rec.info,file="recombination_counts_for_twins_and_siblings.RData")
+
+all.twin.info=rbind(twin.rec.info[[1]][,colnames(twin.rec.info[[1]]) %in% colnames(twin.rec.info[[2]])],twin.rec.info[[2]],twin.rec.info[[3]])
+
+all.twin.info.inf.nuc.fam = all.twin.info[all.twin.info$inf.nuc.fam.mat,]
+
+binom.test(sum(all.twin.info.inf.nuc.fam$twin1.duohmm.mat.nrec > all.twin.info.inf.nuc.fam$sib1.duohmm.mat.nrec,na.rm=T),nrow(all.twin.info.inf.nuc.fam[!is.na(all.twin.info.inf.nuc.fam$twin1.duohmm.mat.nrec) & !is.na(all.twin.info.inf.nuc.fam$sib1.duohmm.mat.nrec),]),p=0.5)
+
+binom.test(sum(all.twin.info.inf.nuc.fam$twin2.duohmm.mat.nrec > all.twin.info.inf.nuc.fam$sib1.duohmm.mat.nrec,na.rm=T),nrow(all.twin.info.inf.nuc.fam[!is.na(all.twin.info.inf.nuc.fam$twin2.duohmm.mat.nrec) & !is.na(all.twin.info.inf.nuc.fam$sib1.duohmm.mat.nrec),]),
+           p=0.5)
+
+
+
+binom.test(sum(all.twin.info$twin1.duohmm.mat.nrec > all.twin.info$sib1.duohmm.mat.nrec,na.rm=T),nrow(all.twin.info[!is.na(all.twin.info$twin1.duohmm.mat.nrec) & !is.na(all.twin.info$sib1.duohmm.mat.nrec),]),p=0.5)
+
+binom.test(sum(all.twin.info$twin2.duohmm.mat.nrec > all.twin.info$sib1.duohmm.mat.nrec,na.rm=T),nrow(all.twin.info[!is.na(all.twin.info$twin2.duohmm.mat.nrec) & !is.na(all.twin.info$sib1.duohmm.mat.nrec),]), p=0.5)
+
+#all.twin.info=all.twin.info[all.twin.info$inf.nuc.fam.mat & all.twin.info$inf.nuc.fam.pat,]
+#all.twin.info=all.twin.info[all.twin.info$inf.mat & all.twin.info$inf.pat,]
+
+all.twin.info$twin.duohmm.mat.nrec.diff = all.twin.info$twin1.duohmm.mat.nrec- all.twin.info$twin2.duohmm.mat.nrec
+all.twin.info$twin1.sib.duohmm.mat.nrec.diff = all.twin.info$twin1.duohmm.mat.nrec- all.twin.info$sib1.duohmm.mat.nrec
+all.twin.info$twin2.sib.duohmm.mat.nrec.diff = all.twin.info$twin2.duohmm.mat.nrec- all.twin.info$sib1.duohmm.mat.nrec
+
+all.twin.info$twin.duohmm.pat.nrec.diff = all.twin.info$twin1.duohmm.pat.nrec- all.twin.info$twin2.duohmm.pat.nrec
+all.twin.info$twin1.sib.duohmm.pat.nrec.diff = all.twin.info$twin1.duohmm.pat.nrec- all.twin.info$sib1.duohmm.pat.nrec
+all.twin.info$twin2.sib.duohmm.pat.nrec.diff = all.twin.info$twin2.duohmm.pat.nrec- all.twin.info$sib1.duohmm.pat.nrec
+
+#95% CI for tausq from Model 1
+#(55.6595,63.9898) maternal
+#(16.0409,18.5702) paternal
+
+
+
+pdf("/home/hilary/maternal_age_recombination/interwin_correlation/histograms_of_difference_in_n_crossovers_between_twins_vs_sibs.duoHMM.pdf",height=10,width=15)
+par(mfrow=c(2,3))
+
+hist(all.twin.info$twin.duohmm.mat.nrec.diff,main="Maternal, twins",xlab=("R1-R2"),breaks=20,prob=T)
+legend("topleft",c(paste0("mean = ",round(mean(all.twin.info$twin.duohmm.mat.nrec.diff,na.rm=T),2)),paste0("var = ",round(var(all.twin.info$twin.duohmm.mat.nrec.diff,na.rm=T),2))))
+curve(dnorm(x,0,sqrt(2*55.6595)),add=T)
+curve(dnorm(x,0,sqrt(2*63.9898)),add=T,lty=2)
+curve(dnorm(x,mean(all.twin.info$twin.duohmm.mat.nrec.diff,na.rm=T),sd(all.twin.info$twin.duohmm.mat.nrec.diff,na.rm=T)),add=T,lty=1,col="red")
+legend("topright",c("N(0,2*tausq_2.5th)","N(0,2*tausq_97.5th)","N(emp_mean,emp_var)"),lty=c(1,2,1),col=c("black","black","red"))
+
+hist(all.twin.info$twin1.sib.duohmm.mat.nrec.diff,main="Maternal, twin1-sib",xlab=("R1-R2"),breaks=20,prob=T)
+legend("topleft",c(paste0("mean = ",round(mean(all.twin.info$twin1.sib.duohmm.mat.nrec.diff,na.rm=T),2)),paste0("var = ",round(var(all.twin.info$twin1.sib.duohmm.mat.nrec.diff,na.rm=T),2))))
+curve(dnorm(x,0,sqrt(2*55.6595)),add=T)
+curve(dnorm(x,0,sqrt(2*63.9898)),add=T,lty=2)
+curve(dnorm(x,mean(all.twin.info$twin1.sib.duohmm.mat.nrec.diff,na.rm=T),sd(all.twin.info$twin1.sib.duohmm.mat.nrec.diff,na.rm=T)),add=T,lty=1,col="red")
+
+hist(all.twin.info$twin2.sib.duohmm.mat.nrec.diff,main="Maternal, twin2-sib",xlab=("R1-R2"),breaks=20,prob=T)
+legend("topleft",c(paste0("mean = ",round(mean(all.twin.info$twin2.sib.duohmm.mat.nrec.diff,na.rm=T),2)),paste0("var = ",round(var(all.twin.info$twin2.sib.duohmm.mat.nrec.diff,na.rm=T),2))))
+curve(dnorm(x,0,sqrt(2*55.6595)),add=T)
+curve(dnorm(x,0,sqrt(2*63.9898)),add=T,lty=2)
+curve(dnorm(x,mean(all.twin.info$twin2.sib.duohmm.mat.nrec.diff,na.rm=T),sd(all.twin.info$twin2.sib.duohmm.mat.nrec.diff,na.rm=T)),add=T,lty=1,col="red")
+
+hist(all.twin.info$twin.duohmm.pat.nrec.diff,main="Paternal, twins",xlab=("R1-R2"),breaks=20,prob=T)
+legend("topleft",c(paste0("mean = ",round(mean(all.twin.info$twin.duohmm.pat.nrec.diff,na.rm=T),2)),paste0("var = ",round(var(all.twin.info$twin.duohmm.pat.nrec.diff,na.rm=T),2))))
+curve(dnorm(x,0,sqrt(2*16.0409)),add=T)
+curve(dnorm(x,0,sqrt(2*18.5702)),add=T,lty=2)
+curve(dnorm(x,mean(all.twin.info$twin.duohmm.pat.nrec.diff,na.rm=T),sd(all.twin.info$twin.duohmm.pat.nrec.diff,na.rm=T)),add=T,lty=1,col="red")
+
+hist(all.twin.info$twin1.sib.duohmm.pat.nrec.diff,main="Paternal, twin1-sib",xlab=("R1-R2"),breaks=20,prob=T)
+legend("topleft",c(paste0("mean = ",round(mean(all.twin.info$twin1.sib.duohmm.pat.nrec.diff,na.rm=T),2)),paste0("var = ",round(var(all.twin.info$twin1.sib.duohmm.pat.nrec.diff,na.rm=T),2))))
+curve(dnorm(x,0,sqrt(2*16.0409)),add=T)
+curve(dnorm(x,0,sqrt(2*18.5702)),add=T,lty=2)
+curve(dnorm(x,mean(all.twin.info$twin1.sib.duohmm.pat.nrec.diff,na.rm=T),sd(all.twin.info$twin1.sib.duohmm.pat.nrec.diff,na.rm=T)),add=T,lty=1,col="red")
+
+hist(all.twin.info$twin2.sib.duohmm.pat.nrec.diff,main="Paternal, twin2-sib",xlab=("R1-R2"),breaks=20,prob=T)
+legend("topleft",c(paste0("mean = ",round(mean(all.twin.info$twin2.sib.duohmm.pat.nrec.diff,na.rm=T),2)),paste0("var = ",round(var(all.twin.info$twin2.sib.duohmm.pat.nrec.diff,na.rm=T),2))))
+curve(dnorm(x,0,sqrt(2*16.0409)),add=T)
+curve(dnorm(x,0,sqrt(2*18.5702)),add=T,lty=2)
+curve(dnorm(x,mean(all.twin.info$twin2.sib.duohmm.pat.nrec.diff,na.rm=T),sd(all.twin.info$twin2.sib.duohmm.pat.nrec.diff,na.rm=T)),add=T,lty=1,col="red")
+
+dev.off()
+
+pdf("/home/hilary/maternal_age_recombination/interwin_correlation/ecdf_of_difference_in_n_crossovers_between_twins_vs_sibs.duoHMM.pdf",height=7,width=12)
+par(mfrow=c(2,3))
+
+test1 = ks.test(all.twin.info$twin.duohmm.mat.nrec.diff,pnorm,sd=sqrt(2*55.6595))
+test2 = ks.test(all.twin.info$twin.duohmm.mat.nrec.diff,pnorm,sd=sqrt(2*63.9898))
+plot(ecdf(all.twin.info$twin.duohmm.mat.nrec.diff),main="Maternal, twins",xlab=("R1-R2"),verticals=T,pch=NA)
+lines(ecdf(rnorm(10000,0,sqrt(2*55.6595))),verticals=T,col="blue")
+lines(ecdf(rnorm(10000,0,sqrt(2*63.9898))),verticals=T,col="red")
+legend("topleft",c("observed data","N(0,2*tausq_2.5th)","N(0,2*tausq_97.5th)"),lty=c(1,2,1),col=c("black","blue","red"))
+legend("left",c(paste0("KS test p-value = ",round(test1$p.value,3)),paste0("KS test p-value = ",round(test2$p.value,3))),text.col=c("blue","red"))
+
+test1 = ks.test(all.twin.info$twin1.sib.duohmm.mat.nrec.diff,pnorm,sd=sqrt(2*55.6595))
+test2 = ks.test(all.twin.info$twin1.sib.duohmm.mat.nrec.diff,pnorm,sd=sqrt(2*63.9898))
+plot(ecdf(all.twin.info$twin1.sib.duohmm.mat.nrec.diff),main="Maternal, twin1-sib",xlab=("R1-R2"),verticals=T,pch=NA)
+lines(ecdf(rnorm(10000,0,sqrt(2*55.6595))),verticals=T,col="blue")
+lines(ecdf(rnorm(10000,0,sqrt(2*63.9898))),verticals=T,col="red")
+legend("left",c(paste0("KS test p-value = ",round(test1$p.value,3)),paste0("KS test p-value = ",round(test2$p.value,3))),text.col=c("blue","red"))
+
+test1 = ks.test(all.twin.info$twin2.sib.duohmm.mat.nrec.diff,pnorm,sd=sqrt(2*55.6595))
+test2 = ks.test(all.twin.info$twin2.sib.duohmm.mat.nrec.diff,pnorm,sd=sqrt(2*63.9898))
+plot(ecdf(all.twin.info$twin2.sib.duohmm.mat.nrec.diff),main="Maternal, twin2-sib",xlab=("R1-R2"),verticals=T,pch=NA)
+lines(ecdf(rnorm(10000,0,sqrt(2*55.6595))),verticals=T,col="blue")
+lines(ecdf(rnorm(10000,0,sqrt(2*63.9898))),verticals=T,col="red")
+legend("left",c(paste0("KS test p-value = ",round(test1$p.value,3)),paste0("KS test p-value = ",round(test2$p.value,3))),text.col=c("blue","red"))
+
+test1 = ks.test(all.twin.info$twin.duohmm.pat.nrec.diff,pnorm,sd=sqrt(2*16.0409))
+test2 = ks.test(all.twin.info$twin.duohmm.pat.nrec.diff,pnorm,sd=sqrt(2*18.5702))
+plot(ecdf(all.twin.info$twin.duohmm.pat.nrec.diff),main="Paternal, twins",xlab=("R1-R2"),verticals=T,pch=NA)
+lines(ecdf(rnorm(10000,0,sqrt(2*16.0409))),verticals=T,col="blue")
+lines(ecdf(rnorm(10000,0,sqrt(2*18.5702))),verticals=T,col="red")
+legend("left",c(paste0("KS test p-value = ",round(test1$p.value,3)),paste0("KS test p-value = ",round(test2$p.value,3))),text.col=c("blue","red"))
+
+test1 = ks.test(all.twin.info$twin1.sib.duohmm.pat.nrec.diff,pnorm,sd=sqrt(2*16.0409))
+test2 = ks.test(all.twin.info$twin1.sib.duohmm.pat.nrec.diff,pnorm,sd=sqrt(2*18.5702))
+plot(ecdf(all.twin.info$twin1.sib.duohmm.pat.nrec.diff),main="Paternal, twin1-sib",xlab=("R1-R2"),verticals=T,pch=NA)
+lines(ecdf(rnorm(10000,0,sqrt(2*16.0409))),verticals=T,col="blue")
+lines(ecdf(rnorm(10000,0,sqrt(2*18.5702))),verticals=T,col="red")
+legend("left",c(paste0("KS test p-value = ",round(test1$p.value,3)),paste0("KS test p-value = ",round(test2$p.value,3))),text.col=c("blue","red"))
+
+test1 = ks.test(all.twin.info$twin2.sib.duohmm.pat.nrec.diff,pnorm,sd=sqrt(2*16.0409))
+test2 = ks.test(all.twin.info$twin2.sib.duohmm.pat.nrec.diff,pnorm,sd=sqrt(2*18.5702))
+plot(ecdf(all.twin.info$twin2.sib.duohmm.pat.nrec.diff),main="Paternal, twin2-sib",xlab=("R1-R2"),verticals=T,pch=NA)
+lines(ecdf(rnorm(10000,0,sqrt(2*16.0409))),verticals=T,col="blue")
+lines(ecdf(rnorm(10000,0,sqrt(2*18.5702))),verticals=T,col="red")
+legend("left",c(paste0("KS test p-value = ",round(test1$p.value,3)),paste0("KS test p-value = ",round(test2$p.value,3))),text.col=c("blue","red"))
+
+dev.off()
+
 
 cor.diff.test = function(r1, r2, n1, n2, alternative = c("two.sided", "less", "greater")) {
     Z1 = 0.5 * log( (1+r1)/(1-r1) )
